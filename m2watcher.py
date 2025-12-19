@@ -164,6 +164,20 @@ class Metin2Watcher:
                 except:
                     return False
         return False
+    
+    def handle_client_closed(self, client: Metin2Client, reason: str):
+        """
+        Obsługuje zamknięcie klienta - wyświetla komunikat i odtwarza dźwięk.
+        
+        Args:
+            client: Klient który został zamknięty
+            reason: Powód zamknięcia (np. "proces zakończony", "okno zamknięte")
+        """
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty ({reason}): {client}")
+        # Odtwórz dźwięk powiadomienia (tak samo jak przy wylogowaniu)
+        if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
+            if not self.sound_wait_for_input:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
         
     def find_metin2_processes(self) -> List[psutil.Process]:
         """Znajduje wszystkie uruchomione procesy Metin2"""
@@ -441,14 +455,14 @@ class Metin2Watcher:
         for pid in list(self.clients.keys()):
             if pid not in current_pids:
                 client = self.clients[pid]
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty (proces zakończony): {client}")
+                self.handle_client_closed(client, "proces zakończony")
                 del self.clients[pid]
         
         # Sprawdź czy okna istniejących klientów zostały zamknięte
         for pid, client in list(self.clients.items()):
             if pid in current_pids:  # Proces nadal istnieje
                 if self.is_window_closed(client.window_handle):
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty (okno zamknięte): {client}")
+                    self.handle_client_closed(client, "okno zamknięte")
                     del self.clients[pid]
         
         # Dodaj nowe klienty i zaktualizuj istniejące
@@ -496,13 +510,13 @@ class Metin2Watcher:
                     # Tylko jeśli wcześniej mieliśmy handle okna
                     if client.window_handle is not None and self.is_window_closed(client.window_handle):
                         # Okno zamknięte - to jest zamknięcie, nie wylogowanie
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty (okno zamknięte): {client}")
+                        self.handle_client_closed(client, "okno zamknięte")
                         del self.clients[pid]
                         continue
                     
                     # Jeśli nie znaleziono okna, ale wcześniej było, może okno zostało zamknięte
                     if client.window_handle is not None and hwnd is None:
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty (okno zniknęło): {client}")
+                        self.handle_client_closed(client, "okno zniknęło")
                         del self.clients[pid]
                         continue
                     
@@ -620,7 +634,6 @@ def main():
         network_threshold=args.threshold,
         debug=args.debug,
         sound_enabled=not args.no_sound,
-        sound_wait_for_input=not args.sound_once
         sound_wait_for_input=not args.sound_once
     )
     watcher.run(show_status=not args.quiet)
