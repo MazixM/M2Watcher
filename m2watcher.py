@@ -6,9 +6,21 @@ Monitoruje procesy Metin2 i wykrywa zamknięcia oraz wylogowania
 import psutil
 import time
 import sys
+import platform
+import threading
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+
+# Import dla dźwięku
+try:
+    if platform.system() == 'Windows':
+        import winsound
+        SOUND_AVAILABLE = True
+    else:
+        SOUND_AVAILABLE = False
+except ImportError:
+    SOUND_AVAILABLE = False
 
 try:
     import win32gui
@@ -62,7 +74,8 @@ class Metin2Watcher:
     ]
     
     def __init__(self, check_interval: float = 2.0, network_check_samples: int = 5, 
-                 network_threshold: int = 1000, debug: bool = False):
+                 network_threshold: int = 1000, debug: bool = False, sound_enabled: bool = True,
+                 sound_wait_for_input: bool = True):
         """
         Inicjalizuje monitor
         
@@ -71,13 +84,86 @@ class Metin2Watcher:
             network_check_samples: Liczba próbek aktywności sieciowej do analizy
             network_threshold: Próg aktywności sieciowej (bajty) - poniżej tego uznaje za wylogowanie
             debug: Czy wyświetlać informacje debugowania
+            sound_enabled: Czy odtwarzać dźwięk przy wylogowaniu
+            sound_wait_for_input: Czy dźwięk ma się powtarzać aż użytkownik naciśnie Enter
         """
         self.check_interval = check_interval
         self.network_check_samples = network_check_samples
         self.network_threshold = network_threshold
         self.debug = debug
+        self.sound_enabled = sound_enabled and SOUND_AVAILABLE
+        self.sound_wait_for_input = sound_wait_for_input
         self.clients: Dict[int, Metin2Client] = {}
         self.running = False
+    
+    def _play_sound_loop(self, stop_event):
+        """Odtwarza dźwięk w pętli aż do zatrzymania"""
+        try:
+            if platform.system() == 'Windows' and SOUND_AVAILABLE:
+                while not stop_event.is_set():
+                    # Odtwórz trzy krótkie beepy
+                    for i in range(3):
+                        if stop_event.is_set():
+                            break
+                        winsound.Beep(800, 200)
+                        if i < 2:  # Nie czekaj po ostatnim beepie
+                            time.sleep(0.1)  # Krótka przerwa między beepami
+                    # Przerwa przed następnym cyklem
+                    if not stop_event.is_set():
+                        time.sleep(0.5)
+        except Exception:
+            pass
+    
+    def play_logout_sound(self, wait_for_input: bool = True):
+        """
+        Odtwarza dźwięk powiadomienia o wylogowaniu.
+        Jeśli wait_for_input=True, dźwięk będzie się powtarzał aż użytkownik naciśnie Enter.
+        Zwraca True jeśli dźwięk został odtworzony, False w przeciwnym razie.
+        """
+        if not self.sound_enabled:
+            return False
+        
+        try:
+            if platform.system() == 'Windows' and SOUND_AVAILABLE:
+                if wait_for_input:
+                    # Utwórz event do zatrzymania dźwięku
+                    stop_event = threading.Event()
+                    
+                    # Uruchom dźwięk w osobnym wątku
+                    sound_thread = threading.Thread(target=self._play_sound_loop, args=(stop_event,), daemon=True)
+                    sound_thread.start()
+                    
+                    # Wyświetl komunikat i czekaj na input
+                    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Naciśnij Enter aby zatrzymać dźwięk powiadomienia...")
+                    try:
+                        input()  # Czeka na Enter
+                    except (EOFError, KeyboardInterrupt):
+                        pass
+                    
+                    # Zatrzymaj dźwięk
+                    stop_event.set()
+                    sound_thread.join(timeout=1.0)  # Czekaj max 1 sekundę na zakończenie wątku
+                    return True
+                else:
+                    # Tylko jeden cykl dźwięku
+                    for i in range(3):
+                        winsound.Beep(800, 200)
+                        if i < 2:
+                            time.sleep(0.1)
+                    return True
+        except Exception as e:
+            # W przypadku błędu, spróbuj alternatywnego dźwięku
+            try:
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                return True
+            except:
+                # Jeśli wszystko zawiedzie, spróbuj prostego beep
+                try:
+                    winsound.Beep(1000, 500)
+                    return True
+                except:
+                    return False
+        return False
         
     def find_metin2_processes(self) -> List[psutil.Process]:
         """Znajduje wszystkie uruchomione procesy Metin2"""
@@ -428,6 +514,10 @@ class Metin2Watcher:
                     # Sprawdź czy nastąpiło wylogowanie
                     if old_logged_in and not client.is_logged_in:
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] [WYLOGOWANY] Wylogowanie wykryte (ekran logowania): {client}")
+                        # Odtwórz dźwięk powiadomienia
+                        if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
+                            if not self.sound_wait_for_input:
+                                print(f"[{datetime.now().strftime('%H:%M:%S')}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
                     elif not old_logged_in and client.is_logged_in:
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] [ZALOGOWANY] Ponowne zalogowanie: {client}")
                         
@@ -458,6 +548,13 @@ class Metin2Watcher:
         print("M2Watcher - Monitor klientów Metin2")
         print("=" * 60)
         print(f"Sprawdzanie co {self.check_interval} sekund...")
+        if self.sound_enabled:
+            if self.sound_wait_for_input:
+                print("Dźwięk powiadomień: WŁĄCZONY (powtarza się aż do naciśnięcia Enter)")
+            else:
+                print("Dźwięk powiadomień: WŁĄCZONY (tylko raz)")
+        else:
+            print("Dźwięk powiadomień: WYŁĄCZONY")
         print("Naciśnij Ctrl+C aby zatrzymać\n")
         
         try:
@@ -504,6 +601,16 @@ def main():
         action='store_true',
         help='Tryb debugowania - wyświetla dodatkowe informacje o aktywności sieciowej'
     )
+    parser.add_argument(
+        '--no-sound',
+        action='store_true',
+        help='Wyłącza odtwarzanie dźwięku przy wylogowaniu'
+    )
+    parser.add_argument(
+        '--sound-once',
+        action='store_true',
+        help='Odtwarza dźwięk tylko raz (nie czeka na Enter)'
+    )
     
     args = parser.parse_args()
     
@@ -511,7 +618,10 @@ def main():
         check_interval=args.interval,
         network_check_samples=args.samples,
         network_threshold=args.threshold,
-        debug=args.debug
+        debug=args.debug,
+        sound_enabled=not args.no_sound,
+        sound_wait_for_input=not args.sound_once
+        sound_wait_for_input=not args.sound_once
     )
     watcher.run(show_status=not args.quiet)
 
