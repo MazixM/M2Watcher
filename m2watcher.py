@@ -5,7 +5,6 @@ Monitoruje procesy Metin2 i wykrywa zamknięcia oraz wylogowania
 
 import psutil
 import time
-import sys
 import platform
 import threading
 from typing import List, Dict, Optional, Tuple
@@ -73,6 +72,10 @@ class Metin2Watcher:
         'wybierz serwer'
     ]
     
+    def _format_time(self) -> str:
+        """Zwraca sformatowany czas w formacie HH:MM:SS"""
+        return datetime.now().strftime('%H:%M:%S')
+    
     def __init__(self, check_interval: float = 2.0, network_check_samples: int = 5, 
                  network_threshold: int = 1000, debug: bool = False, sound_enabled: bool = True,
                  sound_wait_for_input: bool = True):
@@ -96,7 +99,7 @@ class Metin2Watcher:
         self.clients: Dict[int, Metin2Client] = {}
         self.running = False
     
-    def _play_sound_loop(self, stop_event):
+    def _play_sound_loop(self, stop_event: threading.Event) -> None:
         """Odtwarza dźwięk w pętli aż do zatrzymania"""
         try:
             if platform.system() == 'Windows' and SOUND_AVAILABLE:
@@ -134,7 +137,7 @@ class Metin2Watcher:
                     sound_thread.start()
                     
                     # Wyświetl komunikat i czekaj na input
-                    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Naciśnij Enter aby zatrzymać dźwięk powiadomienia...")
+                    print(f"\n[{self._format_time()}] [UWAGA] Naciśnij Enter aby zatrzymać dźwięk powiadomienia...")
                     try:
                         input()  # Czeka na Enter
                     except (EOFError, KeyboardInterrupt):
@@ -151,7 +154,7 @@ class Metin2Watcher:
                         if i < 2:
                             time.sleep(0.1)
                     return True
-        except Exception as e:
+        except Exception:
             # W przypadku błędu, spróbuj alternatywnego dźwięku
             try:
                 winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
@@ -165,7 +168,7 @@ class Metin2Watcher:
                     return False
         return False
     
-    def handle_client_closed(self, client: Metin2Client, reason: str):
+    def handle_client_closed(self, client: Metin2Client, reason: str) -> None:
         """
         Obsługuje zamknięcie klienta - wyświetla komunikat i odtwarza dźwięk.
         
@@ -173,11 +176,11 @@ class Metin2Watcher:
             client: Klient który został zamknięty
             reason: Powód zamknięcia (np. "proces zakończony", "okno zamknięte")
         """
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] [UWAGA] Klient zamknięty ({reason}): {client}")
+        print(f"[{self._format_time()}] [UWAGA] Klient zamknięty ({reason}): {client}")
         # Odtwórz dźwięk powiadomienia (tak samo jak przy wylogowaniu)
         if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
             if not self.sound_wait_for_input:
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
+                print(f"[{self._format_time()}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
         
     def find_metin2_processes(self) -> List[psutil.Process]:
         """Znajduje wszystkie uruchomione procesy Metin2"""
@@ -191,13 +194,19 @@ class Metin2Watcher:
                 continue
         return processes
     
-    def get_window_info(self, pid: int) -> Tuple[Optional[int], Optional[str], Optional[Tuple[int, int]]]:
+    def _find_windows_for_process(self, pid: int, min_size: int = 100) -> List[Tuple[int, str, Tuple[int, int], bool]]:
         """
-        Pobiera informacje o oknie dla danego procesu.
-        Zwraca: (handle, title, size) lub (None, None, None) jeśli nie znaleziono
+        Znajduje okna dla danego procesu.
+        
+        Args:
+            pid: ID procesu
+            min_size: Minimalny rozmiar okna (szerokość i wysokość)
+            
+        Returns:
+            Lista krotek (hwnd, title, size, is_visible)
         """
         if not WIN32_AVAILABLE:
-            return None, None, None
+            return []
             
         window_info = []
         
@@ -205,15 +214,12 @@ class Metin2Watcher:
             try:
                 _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
                 if found_pid == pid:
-                    # Sprawdź czy to jest główne okno (ma tytuł i jest widoczne lub ma rozmiar)
                     title = win32gui.GetWindowText(hwnd)
                     rect = win32gui.GetWindowRect(hwnd)
                     width = rect[2] - rect[0]
                     height = rect[3] - rect[1]
                     
-                    # Filtruj bardzo małe okna (prawdopodobnie nie są głównym oknem gry)
-                    if width > 100 and height > 100:
-                        # Preferuj widoczne okna, ale zbieraj też niewidoczne
+                    if width > min_size and height > min_size:
                         is_visible = win32gui.IsWindowVisible(hwnd)
                         windows.append((hwnd, title, (width, height), is_visible))
             except Exception:
@@ -221,61 +227,67 @@ class Metin2Watcher:
         
         try:
             win32gui.EnumWindows(callback, window_info)
-            if window_info:
-                # Sortuj: najpierw widoczne, potem po rozmiarze
-                window_info.sort(key=lambda x: (x[3], x[2][0] * x[2][1]), reverse=True)
-                hwnd, title, size, _ = window_info[0]
-                # Jeśli tytuł jest pusty, spróbuj pobrać klasę okna jako tytuł
-                if not title or title.strip() == "":
-                    try:
-                        class_name = win32gui.GetClassName(hwnd)
-                        title = f"[{class_name}]"
-                    except Exception:
-                        title = "Metin2"
-                return hwnd, title, size
-        except Exception as e:
-            # Debug: można wykomentować w produkcji
-            # print(f"Błąd podczas pobierania okna dla PID {pid}: {e}")
+            # Sortuj: najpierw widoczne, potem po rozmiarze
+            window_info.sort(key=lambda x: (x[3], x[2][0] * x[2][1]), reverse=True)
+        except Exception:
             pass
+        
+        return window_info
+    
+    def _get_window_title_fallback(self, hwnd: int) -> str:
+        """
+        Pobiera tytuł okna lub klasę jako fallback.
+        
+        Args:
+            hwnd: Handle okna
+            
+        Returns:
+            Tytuł okna lub klasa okna w nawiasach
+        """
+        try:
+            class_name = win32gui.GetClassName(hwnd)
+            return f"[{class_name}]"
+        except Exception:
+            return "Metin2"
+    
+    def get_window_info(self, pid: int) -> Tuple[Optional[int], Optional[str], Optional[Tuple[int, int]]]:
+        """
+        Pobiera informacje o oknie dla danego procesu.
+        
+        Args:
+            pid: ID procesu
+            
+        Returns:
+            (handle, title, size) lub (None, None, None) jeśli nie znaleziono
+        """
+        window_info = self._find_windows_for_process(pid, min_size=100)
+        
+        if window_info:
+            hwnd, title, size, _ = window_info[0]
+            # Jeśli tytuł jest pusty, spróbuj pobrać klasę okna jako tytuł
+            if not title or title.strip() == "":
+                title = self._get_window_title_fallback(hwnd)
+            return hwnd, title, size
         
         return None, None, None
     
     def _find_any_window(self, pid: int) -> Tuple[Optional[int], Optional[str], Optional[Tuple[int, int]]]:
-        """Znajduje jakiekolwiek okno procesu, nawet bardzo małe"""
-        if not WIN32_AVAILABLE:
-            return None, None, None
+        """
+        Znajduje jakiekolwiek okno procesu, nawet bardzo małe.
+        
+        Args:
+            pid: ID procesu
             
-        window_info = []
+        Returns:
+            (handle, title, size) lub (None, None, None) jeśli nie znaleziono
+        """
+        window_info = self._find_windows_for_process(pid, min_size=50)
         
-        def callback(hwnd, windows):
-            try:
-                _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
-                if found_pid == pid:
-                    title = win32gui.GetWindowText(hwnd)
-                    rect = win32gui.GetWindowRect(hwnd)
-                    width = rect[2] - rect[0]
-                    height = rect[3] - rect[1]
-                    # Przyjmij nawet małe okna
-                    if width > 50 and height > 50:
-                        is_visible = win32gui.IsWindowVisible(hwnd)
-                        windows.append((hwnd, title, (width, height), is_visible))
-            except Exception:
-                pass
-        
-        try:
-            win32gui.EnumWindows(callback, window_info)
-            if window_info:
-                window_info.sort(key=lambda x: (x[3], x[2][0] * x[2][1]), reverse=True)
-                hwnd, title, size, _ = window_info[0]
-                if not title or title.strip() == "":
-                    try:
-                        class_name = win32gui.GetClassName(hwnd)
-                        title = f"[{class_name}]"
-                    except Exception:
-                        title = "Metin2"
-                return hwnd, title, size
-        except Exception:
-            pass
+        if window_info:
+            hwnd, title, size, _ = window_info[0]
+            if not title or title.strip() == "":
+                title = self._get_window_title_fallback(hwnd)
+            return hwnd, title, size
         
         return None, None, None
     
@@ -446,7 +458,7 @@ class Metin2Watcher:
         # (to wymaga dostosowania do konkretnych serwerów)
         return True
     
-    def update_clients(self):
+    def update_clients(self) -> None:
         """Aktualizuje listę monitorowanych klientów"""
         current_processes = self.find_metin2_processes()
         current_pids = {proc.pid for proc in current_processes}
@@ -492,7 +504,7 @@ class Metin2Watcher:
                         window_size=window_size
                     )
                     self.clients[pid] = client
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] [OK] Nowy klient wykryty: {client}")
+                    print(f"[{self._format_time()}] [OK] Nowy klient wykryty: {client}")
                 else:
                     # Aktualizuj istniejący klient
                     client = self.clients[pid]
@@ -527,24 +539,24 @@ class Metin2Watcher:
                     
                     # Sprawdź czy nastąpiło wylogowanie
                     if old_logged_in and not client.is_logged_in:
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] [WYLOGOWANY] Wylogowanie wykryte (ekran logowania): {client}")
+                        print(f"[{self._format_time()}] [WYLOGOWANY] Wylogowanie wykryte (ekran logowania): {client}")
                         # Odtwórz dźwięk powiadomienia
                         if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
                             if not self.sound_wait_for_input:
-                                print(f"[{datetime.now().strftime('%H:%M:%S')}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
+                                print(f"[{self._format_time()}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
                     elif not old_logged_in and client.is_logged_in:
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] [ZALOGOWANY] Ponowne zalogowanie: {client}")
+                        print(f"[{self._format_time()}] [ZALOGOWANY] Ponowne zalogowanie: {client}")
                         
-            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     
-    def print_status(self, debug: bool = False):
+    def print_status(self, debug: bool = False) -> None:
         """Wyświetla aktualny status wszystkich klientów"""
         if not self.clients:
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Brak aktywnych klientów Metin2")
+            print(f"[{self._format_time()}] Brak aktywnych klientów Metin2")
             return
         
-        print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Status klientów ({len(self.clients)}):")
+        print(f"\n[{self._format_time()}] Status klientów ({len(self.clients)}):")
         for client in self.clients.values():
             status_icon = "[ZALOGOWANY]" if client.is_logged_in else "[WYLOGOWANY]"
             print(f"  {status_icon} {client}")
@@ -555,7 +567,7 @@ class Metin2Watcher:
                 print(f"      Debug: Historia próbek: {len(client.network_activity_history)}/{self.network_check_samples}")
         print()
     
-    def run(self, show_status: bool = True):
+    def run(self, show_status: bool = True) -> None:
         """Uruchamia monitor w pętli"""
         self.running = True
         print("=" * 60)
