@@ -25,7 +25,7 @@
 
 ## Krok 4: Dodanie bota na serwer
 
-1. W menu po lewej stronie wybierz **"OAuth2"** → **"URL Generator"**
+1. W menu po lewej stronie wybierz **"OAuth2"** → **"OAuth2 URL Generator"**
 2. W sekcji **"SCOPES"** zaznacz:
    - ✅ **bot**
 3. W sekcji **"BOT PERMISSIONS"** zaznacz:
