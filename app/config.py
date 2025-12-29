@@ -46,6 +46,13 @@ class Config:
                     self._config = {**self.DEFAULT_CONFIG, **loaded_config}
             except Exception as e:
                 print(f"Błąd podczas ładowania konfiguracji: {e}")
+        else:
+            # Jeśli plik nie istnieje, utwórz domyślny plik konfiguracyjny
+            try:
+                self.save_config()
+                print(f"Utworzono domyślny plik konfiguracyjny: {CONFIG_FILE}")
+            except Exception as e:
+                print(f"Błąd podczas tworzenia domyślnego pliku konfiguracyjnego: {e}")
     
     def save_config(self) -> None:
         """Zapisuje konfigurację do pliku"""
