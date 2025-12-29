@@ -69,8 +69,8 @@ Więcej informacji w katalogu `app/`.
 
 ## Wymagania
 
-- Python 3.7+
-- Windows (dla pełnej funkcjonalności)
+- Python 3.7+ (Jeśli uruchamiana jest wersja exe, to python nie jest wymagany)
+- System operacyjny Windows
 
 ## Wsparcie projektu
 
