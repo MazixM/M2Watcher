@@ -1,4 +1,4 @@
-name: Build EXE and Create Release
+name: Build EXE
 
 on:
   push:
@@ -8,8 +8,6 @@ on:
     paths:
       - 'app/**'
       - '.github/workflows/build.yml'
-    tags:
-      - 'v*'  # Trigger również przy tagach zaczynających się od 'v'
   pull_request:
     branches:
       - main
@@ -26,8 +24,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Potrzebne do sprawdzania tagów
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -81,63 +77,3 @@ jobs:
         name: M2Watcher.zip
         path: ${{ env.zip_name }}
         retention-days: 30
-    
-    - name: Determine release tag and name
-      id: release_info
-      shell: pwsh
-      run: |
-        if ("${{ github.ref }}" -like "refs/tags/*") {
-          # Jeśli push tagu, użyj nazwy tagu
-          $tag = "${{ github.ref_name }}"
-          $isTag = "true"
-          $isPrerelease = "false"
-        } else {
-          # Dla pushu do main, użyj unikalnego tagu z datą i SHA
-          $date = Get-Date -Format "yyyyMMdd"
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $tag = "latest-$date-$sha"
-          $isTag = "false"
-          $isPrerelease = "true"
-        }
-        Write-Output "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        Write-Output "is_tag=$isTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        Write-Output "is_prerelease=$isPrerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        Write-Output "Używany tag: $tag (is_tag: $isTag, prerelease: $isPrerelease)"
-    
-    - name: Create or Update Release
-      if: github.event_name == 'push'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          app/dist/M2Watcher.exe
-          ${{ env.zip_name }}
-        tag_name: ${{ steps.release_info.outputs.tag }}
-        target_commitish: ${{ github.sha }}
-        name: Release ${{ steps.release_info.outputs.tag }}
-        body: |
-          ## M2Watcher ${{ steps.release_info.outputs.tag }}
-          
-          Automatycznie wygenerowany build z commit: `${{ github.sha }}`
-          
-          **Commit:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          
-          ### 📦 Pobierz
-          
-          - **M2Watcher.exe** - bezpośredni plik wykonywalny
-          - **M2Watcher-${{ github.sha }}.zip** - archiwum ZIP z exe
-          
-          ### 📝 Zmiany
-          
-          Zobacz [commity](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }})
-          
-          ### ⚙️ Instalacja
-          
-          1. Pobierz plik ZIP lub EXE
-          2. Rozpakuj (jeśli ZIP)
-          3. Uruchom M2Watcher.exe
-          4. Skonfiguruj zgodnie z [instrukcją](https://github.com/${{ github.repository }}/blob/main/app/README.md)
-        draft: false
-        prerelease: ${{ steps.release_info.outputs.is_prerelease == 'true' }}
-        fail_on_unmatched_files: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
