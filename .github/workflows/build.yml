@@ -41,6 +41,7 @@ jobs:
       env:
         CI: true
         NON_INTERACTIVE: true
+        PYTHONIOENCODING: utf-8
       run: |
         python build_exe.py
     

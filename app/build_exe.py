@@ -11,6 +11,15 @@ from pathlib import Path
 def build_exe():
     """Buduje exe z obfuskacją"""
     
+    # Ustaw kodowanie UTF-8 dla stdout/stderr (potrzebne w Windows CI)
+    if sys.platform == 'win32':
+        try:
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except (AttributeError, ImportError):
+            pass  # Jeśli nie można zmienić, kontynuuj z domyślnym
+    
     # Zmienne do śledzenia statusu
     obfuscation_success = False
     obfuscation_warnings = []
