@@ -16,6 +16,11 @@ on:
       - 'app/**'
       - '.github/workflows/build.yml'
   workflow_dispatch:  # Pozwala na ręczne uruchomienie
+    inputs:
+      release_tag:
+        description: 'Tag release (np. v1.0.0) - jeśli podasz, utworzy release z exe w zipie'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -55,14 +60,15 @@ jobs:
         $size = (Get-Item "dist/M2Watcher.exe").Length / 1MB
         Write-Output "✓ M2Watcher.exe utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
     
-    - name: Create ZIP archive
+    - name: Create ZIP archive (only for releases)
+      if: github.event.inputs.release_tag != '' || startsWith(github.ref, 'refs/tags/')
       shell: pwsh
       run: |
         $zipName = "M2Watcher-${{ github.sha }}.zip"
         $zipPath = Join-Path $env:GITHUB_WORKSPACE $zipName
         Compress-Archive -Path "app/dist/M2Watcher.exe" -DestinationPath $zipPath -Force
         Write-Output "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        Write-Output "✓ Utworzono archiwum: $zipName w $zipPath"
+        Write-Output "✓ Utworzono archiwum: $zipName"
     
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
@@ -71,9 +77,49 @@ jobs:
         path: app/dist/M2Watcher.exe
         retention-days: 30
     
-    - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v4
+    - name: Determine release tag
+      id: release_tag
+      shell: pwsh
+      run: |
+        if ("${{ github.event.inputs.release_tag }}") {
+          $tag = "${{ github.event.inputs.release_tag }}"
+        } elseif ("${{ github.ref }}" -like "refs/tags/*") {
+          $tag = "${{ github.ref_name }}"
+        } else {
+          $tag = ""
+        }
+        Write-Output "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        Write-Output "Release tag: $tag"
+    
+    - name: Create Release with ZIP
+      if: steps.release_tag.outputs.tag != ''
+      uses: softprops/action-gh-release@v1
       with:
-        name: M2Watcher.zip
-        path: ${{ env.zip_name }}
-        retention-days: 30
+        files: ${{ env.zip_name }}
+        tag_name: ${{ steps.release_tag.outputs.tag }}
+        name: Release ${{ steps.release_tag.outputs.tag }}
+        body: |
+          ## M2Watcher ${{ steps.release_tag.outputs.tag }}
+          
+          Automatycznie wygenerowany build z commit: `${{ github.sha }}`
+          
+          ### 📦 Pobierz
+          
+          Pobierz plik **M2Watcher-${{ github.sha }}.zip** z sekcji Assets poniżej.
+          
+          ### 📝 Zmiany
+          
+          Zobacz [commity](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }})
+          
+          ### ⚙️ Instalacja
+          
+          1. Pobierz plik ZIP
+          2. Rozpakuj
+          3. Uruchom M2Watcher.exe
+          4. Skonfiguruj zgodnie z [instrukcją](https://github.com/${{ github.repository }}/blob/main/app/README.md)
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
