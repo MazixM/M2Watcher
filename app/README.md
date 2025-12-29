@@ -19,6 +19,17 @@ Monitor klientów Metin2 z wykrywaniem zamknięć i wylogowań.
 
 ## Instalacja
 
+### Opcja 1: Pobierz gotowy plik exe (zalecane)
+
+Gotowy plik wykonywalny można pobrać z sekcji [Releases](https://github.com/MazixM/M2Watcher/releases):
+
+1. Przejdź do [Releases](https://github.com/MazixM/M2Watcher/releases)
+2. Wybierz najnowszą wersję
+3. Pobierz plik `M2Watcher-*.zip`
+4. Rozpakuj i uruchom `M2Watcher.exe`
+
+### Opcja 2: Zbuduj z kodu źródłowego
+
 ```bash
 pip install -r requirements.txt
 ```

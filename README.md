@@ -39,6 +39,9 @@ Aplikacja działa w sposób całkowicie pasywny - **nie modyfikuje** i **nie ing
 
 ### Instalacja
 
+**Gotowy plik exe:** Pobierz z [Releases](https://github.com/MazixM/M2Watcher/releases)
+
+**Lub zbuduj z kodu źródłowego:**
 ```bash
 cd app
 pip install -r requirements.txt
