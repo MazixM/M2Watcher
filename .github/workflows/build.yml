@@ -60,13 +60,13 @@ jobs:
         Write-Output "✓ M2Watcher.exe utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
     
     - name: Create ZIP archive
-      working-directory: ./app
       shell: pwsh
       run: |
         $zipName = "M2Watcher-${{ github.sha }}.zip"
-        Compress-Archive -Path "dist/M2Watcher.exe" -DestinationPath "../$zipName" -Force
-        Write-Output "zip_path=../$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        Write-Output "✓ Utworzono archiwum: $zipName"
+        $zipPath = Join-Path $env:GITHUB_WORKSPACE $zipName
+        Compress-Archive -Path "app/dist/M2Watcher.exe" -DestinationPath $zipPath -Force
+        Write-Output "zip_name=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Write-Output "✓ Utworzono archiwum: $zipName w $zipPath"
     
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
@@ -79,7 +79,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: M2Watcher.zip
-        path: ${{ env.zip_path }}
+        path: ${{ env.zip_name }}
         retention-days: 30
     
     - name: Determine release tag and name
@@ -107,7 +107,7 @@ jobs:
       with:
         files: |
           app/dist/M2Watcher.exe
-          ${{ env.zip_path }}
+          ${{ env.zip_name }}
         tag_name: ${{ steps.release_info.outputs.tag }}
         name: Release ${{ steps.release_info.outputs.tag }}
         body: |
