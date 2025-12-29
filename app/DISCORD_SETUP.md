@@ -139,5 +139,3 @@
 ⚠️ **WAŻNE**: Nigdy nie udostępniaj swojego tokenu bota publicznie!
 - Token bota daje pełny dostęp do bota
 - Jeśli token zostanie skradziony, natychmiast zresetuj go w Discord Developer Portal
-- Nie commituj pliku `config.json` z tokenem do repozytorium Git
-
