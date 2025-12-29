@@ -212,8 +212,16 @@ def build_exe():
     # Krok 3: Czyszczenie
     print("\n[3/3] Czyszczenie...")
     
+    # Sprawdź czy jesteśmy w trybie CI (nieinteraktywnym)
+    is_ci = os.getenv("CI") == "true" or os.getenv("NON_INTERACTIVE") == "true"
+    
     # Usuń tymczasowe pliki (opcjonalnie - można zostawić dla debugowania)
-    cleanup = input("  Czy usunąć pliki tymczasowe (build, *.spec)? [T/n]: ").strip().lower()
+    if is_ci:
+        # W trybie CI zawsze czyść pliki tymczasowe
+        cleanup = 'y'
+        print("  Tryb CI wykryty - automatyczne czyszczenie plików tymczasowych")
+    else:
+        cleanup = input("  Czy usunąć pliki tymczasowe (build, *.spec)? [T/n]: ").strip().lower()
     
     if cleanup != 'n':
         if Path("build").exists():
