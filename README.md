@@ -20,6 +20,14 @@ M2Watcher/
 
 Monitor klientów Metin2 z wykrywaniem zamknięć i wylogowań.
 
+### Jak działa aplikacja
+
+Aplikacja działa w sposób całkowicie pasywny - **nie modyfikuje** i **nie ingeruje** w działanie klienta gry Metin2. Program monitoruje system operacyjny (procesy, okna, aktywność sieciową) i wykrywa zamknięcia oraz wylogowania. Aplikacja nie używa modyfikacji pamięci, wstrzykiwania kodu, czytania pamięci procesu gry ani analizy obrazu ekranu - korzysta wyłącznie z publicznych API systemu Windows.
+
+### ⚠️ Ważne informacje
+
+**Odpowiedzialność:** Według autora, aplikacja nie łamie regulaminu gry Metin2, ponieważ działa w sposób całkowicie pasywny i nie ingeruje w działanie klienta gry. Jednak **używasz aplikacji na własną odpowiedzialność**. Autor nie ponosi odpowiedzialności za ewentualne konsekwencje wynikające z użycia aplikacji.
+
 ### Funkcje
 
 - ✅ Automatyczne wykrywanie uruchomionych klientów Metin2

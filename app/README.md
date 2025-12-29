@@ -76,10 +76,28 @@ Plik exe będzie w katalogu `dist/M2Watcher.exe`.
 
 ## Jak działa
 
-Program monitoruje procesy Metin2 i wykrywa:
-1. **Zamknięcie klienta** - gdy proces lub okno zostanie zamknięte
-2. **Wylogowanie** - gdy aktywność sieciowa spada (brak połączeń ESTABLISHED)
-3. **Ponowne zalogowanie** - gdy aktywność sieciowa wzrasta
+Aplikacja działa w sposób całkowicie pasywny - **nie modyfikuje** i **nie ingeruje** w działanie klienta gry Metin2. 
+
+Program monitoruje system operacyjny i wykrywa:
+1. **Zamknięcie klienta** - sprawdza czy proces Metin2 lub jego okno nadal istnieje w systemie
+2. **Wylogowanie** - analizuje aktywność sieciową procesu (sprawdza połączenia TCP w stanie ESTABLISHED). Gdy aktywność spada poniżej progu, oznacza to wylogowanie
+3. **Ponowne zalogowanie** - gdy aktywność sieciowa wzrasta, oznacza to ponowne zalogowanie
+
+Aplikacja **nie używa**:
+- Modifikacji pamięci procesu gry
+- Wstrzykiwania kodu do procesu gry
+- Czytania pamięci procesu gry
+- Interakcji z oknem gry (kliknięcia, wpisywanie tekstu)
+- Analizy obrazu ekranu
+
+Aplikacja korzysta wyłącznie z publicznych API systemu Windows do:
+- Listowania procesów
+- Sprawdzania aktywności sieciowej procesów
+- Wykrywania okien aplikacji
+
+## ⚠️ Ważne informacje
+
+**Odpowiedzialność:** Według autora, aplikacja nie łamie regulaminu gry Metin2, ponieważ działa w sposób całkowicie pasywny i nie ingeruje w działanie klienta gry. Jednak **używasz aplikacji na własną odpowiedzialność**. Autor nie ponosi odpowiedzialności za ewentualne konsekwencje wynikające z użycia aplikacji.
 
 ## Rozwiązywanie problemów
 
