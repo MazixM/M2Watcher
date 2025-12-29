@@ -28,6 +28,8 @@ Gotowy plik wykonywalny można pobrać z sekcji [Releases](https://github.com/Ma
 3. Pobierz plik `M2Watcher-*.zip`
 4. Rozpakuj i uruchom `M2Watcher.exe`
 
+**Uwaga:** Plik exe jest samodzielny i **nie wymaga** instalacji Pythona ani dodatkowych bibliotek. Wszystkie zależności są już wbudowane w plik exe.
+
 ### Opcja 2: Zbuduj z kodu źródłowego
 
 ```bash
