@@ -1,4 +1,4 @@
-# M2Watcher - Open Source
+# M2Watcher
 
 Aplikacja do monitorowania klientów Metin2.
 
