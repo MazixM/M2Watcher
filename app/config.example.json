@@ -1,0 +1,17 @@
+{
+  "check_interval": 2.0,
+  "network_check_samples": 5,
+  "network_threshold": 1000,
+  "debug": false,
+  "sound_enabled": true,
+  "sound_wait_for_input": true,
+  "show_status": true,
+  "discord": {
+    "enabled": true,
+    "bot_token": "YOUR_BOT_TOKEN",
+    "guild_id": "YOUR_GUILD_ID",
+    "user_id": "YOUR_DISCORD_USER_ID",
+    "channel_id": "YOUR_CHANNEL_ID"
+  }
+}
+

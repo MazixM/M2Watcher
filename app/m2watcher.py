@@ -7,9 +7,19 @@ import psutil
 import time
 import platform
 import threading
+import sys
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+
+# Import modułów aplikacji
+try:
+    from config import Config
+    from notifications import NotificationManager
+except ImportError:
+    # Tryb kompatybilności - jeśli moduły nie są dostępne
+    Config = None
+    NotificationManager = None
 
 # Import dla dźwięku
 try:
@@ -44,6 +54,7 @@ class Metin2Client:
     num_connections: int = 0  # Liczba aktywnych połączeń sieciowych
     window_handle: Optional[int] = None  # Handle do głównego okna gry
     window_size: Optional[Tuple[int, int]] = None  # Rozmiar okna (width, height)
+    no_connections_since: Optional[datetime] = None  # Czas kiedy połączenia spadły do 0
     
     def __post_init__(self):
         if self.network_activity_history is None:
@@ -78,7 +89,7 @@ class Metin2Watcher:
     
     def __init__(self, check_interval: float = 2.0, network_check_samples: int = 5, 
                  network_threshold: int = 1000, debug: bool = False, sound_enabled: bool = True,
-                 sound_wait_for_input: bool = True):
+                 sound_wait_for_input: bool = True, config: Optional[Config] = None):
         """
         Inicjalizuje monitor
         
@@ -89,6 +100,7 @@ class Metin2Watcher:
             debug: Czy wyświetlać informacje debugowania
             sound_enabled: Czy odtwarzać dźwięk przy wylogowaniu
             sound_wait_for_input: Czy dźwięk ma się powtarzać aż użytkownik naciśnie Enter
+            config: Obiekt konfiguracji (opcjonalny)
         """
         self.check_interval = check_interval
         self.network_check_samples = network_check_samples
@@ -98,6 +110,12 @@ class Metin2Watcher:
         self.sound_wait_for_input = sound_wait_for_input
         self.clients: Dict[int, Metin2Client] = {}
         self.running = False
+        
+        # Inicjalizacja modułów (jeśli dostępne)
+        self.config = config or (Config() if Config else None)
+        self.notification_manager = None
+        if self.config and NotificationManager:
+            self.notification_manager = NotificationManager(self.config)
     
     def _play_sound_loop(self, stop_event: threading.Event) -> None:
         """Odtwarza dźwięk w pętli aż do zatrzymania"""
@@ -177,6 +195,11 @@ class Metin2Watcher:
             reason: Powód zamknięcia (np. "proces zakończony", "okno zamknięte")
         """
         print(f"[{self._format_time()}] [UWAGA] Klient zamknięty ({reason}): {client}")
+        
+        # Wyślij powiadomienia
+        if self.notification_manager:
+            self.notification_manager.notify_client_closed(str(client))
+        
         # Odtwórz dźwięk powiadomienia (tak samo jak przy wylogowaniu)
         if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
             if not self.sound_wait_for_input:
@@ -379,14 +402,27 @@ class Metin2Watcher:
         """
         Sprawdza czy klient jest zalogowany na podstawie aktywności sieciowej.
         Główny wskaźnik: liczba aktywnych połączeń sieciowych (ESTABLISHED).
-        Jeśli brak połączeń = wylogowany.
+        Jeśli brak połączeń przez 5 sekund = wylogowany.
         """
         # Aktualizuj liczbę połączeń
         client.num_connections = num_connections
         
-        # GŁÓWNY WSKAŹNIK: Jeśli brak połączeń sieciowych, klient jest wylogowany
+        # GŁÓWNY WSKAŹNIK: Jeśli brak połączeń sieciowych
         if num_connections == 0:
-            return False
+            # Jeśli to pierwszy raz gdy brak połączeń, zapisz czas
+            if client.no_connections_since is None:
+                client.no_connections_since = datetime.now()
+            
+            # Sprawdź czy minęło 5 sekund od momentu braku połączeń
+            time_without_connections = (datetime.now() - client.no_connections_since).total_seconds()
+            if time_without_connections >= 5.0:
+                return False
+            else:
+                # Czekamy jeszcze - klient nadal uważany za zalogowanego
+                return True
+        else:
+            # Połączenia są aktywne - zresetuj timer
+            client.no_connections_since = None
         
         # Dla nowych klientów (bez historii) zakładamy że są zalogowani
         # i zbieramy próbki przed oceną
@@ -540,12 +576,21 @@ class Metin2Watcher:
                     # Sprawdź czy nastąpiło wylogowanie
                     if old_logged_in and not client.is_logged_in:
                         print(f"[{self._format_time()}] [WYLOGOWANY] Wylogowanie wykryte (ekran logowania): {client}")
+                        
+                        # Wyślij powiadomienia
+                        if self.notification_manager:
+                            self.notification_manager.notify_logout(str(client))
+                        
                         # Odtwórz dźwięk powiadomienia
                         if self.play_logout_sound(wait_for_input=self.sound_wait_for_input):
                             if not self.sound_wait_for_input:
                                 print(f"[{self._format_time()}] [DŹWIĘK] Odtworzono powiadomienie dźwiękowe")
                     elif not old_logged_in and client.is_logged_in:
                         print(f"[{self._format_time()}] [ZALOGOWANY] Ponowne zalogowanie: {client}")
+                        
+                        # Wyślij powiadomienia
+                        if self.notification_manager:
+                            self.notification_manager.notify_reconnect(str(client))
                         
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -592,65 +637,4 @@ class Metin2Watcher:
         except KeyboardInterrupt:
             print("\n\nZatrzymywanie monitora...")
             self.running = False
-
-
-def main():
-    """Główna funkcja programu"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Monitor klientów Metin2')
-    parser.add_argument(
-        '-i', '--interval',
-        type=float,
-        default=2.0,
-        help='Interwał sprawdzania w sekundach (domyślnie: 2.0)'
-    )
-    parser.add_argument(
-        '-q', '--quiet',
-        action='store_true',
-        help='Tryb cichy - wyświetla tylko ważne wydarzenia'
-    )
-    parser.add_argument(
-        '-s', '--samples',
-        type=int,
-        default=5,
-        help='Liczba próbek aktywności sieciowej do analizy (domyślnie: 5)'
-    )
-    parser.add_argument(
-        '-t', '--threshold',
-        type=int,
-        default=1000,
-        help='Próg aktywności sieciowej w bajtach - poniżej tego uznaje za wylogowanie (domyślnie: 1000)'
-    )
-    parser.add_argument(
-        '-d', '--debug',
-        action='store_true',
-        help='Tryb debugowania - wyświetla dodatkowe informacje o aktywności sieciowej'
-    )
-    parser.add_argument(
-        '--no-sound',
-        action='store_true',
-        help='Wyłącza odtwarzanie dźwięku przy wylogowaniu'
-    )
-    parser.add_argument(
-        '--sound-once',
-        action='store_true',
-        help='Odtwarza dźwięk tylko raz (nie czeka na Enter)'
-    )
-    
-    args = parser.parse_args()
-    
-    watcher = Metin2Watcher(
-        check_interval=args.interval,
-        network_check_samples=args.samples,
-        network_threshold=args.threshold,
-        debug=args.debug,
-        sound_enabled=not args.no_sound,
-        sound_wait_for_input=not args.sound_once
-    )
-    watcher.run(show_status=not args.quiet)
-
-
-if __name__ == '__main__':
-    main()
 
