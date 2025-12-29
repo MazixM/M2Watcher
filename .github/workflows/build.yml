@@ -81,15 +81,18 @@ jobs:
       id: release_tag
       shell: pwsh
       run: |
-        if ("${{ github.event.inputs.release_tag }}") {
+        $tag = ""
+        # Sprawdź czy to workflow_dispatch z podanym tagiem
+        if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ github.event.inputs.release_tag }}") {
           $tag = "${{ github.event.inputs.release_tag }}"
-        } elseif ("${{ github.ref }}" -like "refs/tags/*") {
-          $tag = "${{ github.ref_name }}"
-        } else {
-          $tag = ""
         }
+        # Sprawdź czy to push tagu
+        elseif ("${{ github.ref }}" -like "refs/tags/*") {
+          $tag = "${{ github.ref_name }}"
+        }
+        
         Write-Output "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        Write-Output "Release tag: $tag"
+        Write-Output "Release tag: '$tag' (event: ${{ github.event_name }}, ref: ${{ github.ref }})"
     
     - name: Create Release with ZIP
       if: steps.release_tag.outputs.tag != ''
