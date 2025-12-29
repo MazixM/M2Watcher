@@ -10,8 +10,7 @@
 ## Krok 2: Utworzenie bota
 
 1. W menu po lewej stronie wybierz **"Bot"**
-2. Kliknij **"Add Bot"** i potwierdź
-3. W sekcji **"Token"** kliknij **"Reset Token"** lub **"Copy"** aby skopiować token bota
+2. W sekcji **"Token"** kliknij **"Reset Token"** lub **"Copy"** aby skopiować token bota
    - ⚠️ **WAŻNE**: Zapisz ten token w bezpiecznym miejscu! Będzie potrzebny w konfiguracji.
    - Token wygląda mniej więcej tak: `MTIzNDU2Nzg5MDEyMzQ1Njc4OTA.Xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
