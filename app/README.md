@@ -90,3 +90,9 @@ Program monitoruje procesy Metin2 i wykrywa:
 **Program zbyt często wykrywa wylogowania:**
 - Zwiększ próg w konfiguracji: `"network_threshold": 2000`
 - Zwiększ liczbę próbek w konfiguracji: `"network_check_samples": 7`
+
+## Wsparcie projektu
+
+Jeśli aplikacja jest dla Ciebie przydatna, możesz wesprzeć projekt dobrowolną dotacją:
+
+💙 [Wesprzyj projekt na Tipply](https://tipply.pl/u/mazix)

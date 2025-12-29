@@ -61,6 +61,12 @@ Więcej informacji w katalogu `app/`.
 - Python 3.7+
 - Windows (dla pełnej funkcjonalności)
 
+## Wsparcie projektu
+
+Jeśli aplikacja jest dla Ciebie przydatna, możesz wesprzeć projekt dobrowolną dotacją:
+
+💙 [Wesprzyj projekt na Tipply](https://tipply.pl/u/mazix)
+
 ## Licencja
 
 Open Source - zobacz plik LICENSE w repozytorium.
