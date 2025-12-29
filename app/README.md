@@ -35,21 +35,18 @@ cp config.example.json ~/.m2watcher/config.json
 
 ### Konfiguracja Discord
 
+📖 **Szczegółowy poradnik konfiguracji:** [DISCORD_SETUP.md](DISCORD_SETUP.md)
+
+Szybki start:
 1. Utwórz swój własny serwer Discord
 2. Utwórz aplikację na https://discord.com/developers/applications
 3. Utwórz bota i skopiuj token
 4. Zaproś bota na swój serwer z odpowiednimi uprawnieniami
 5. Ustaw w konfiguracji:
-1. Utwórz swój własny serwer Discord
-2. Utwórz aplikację na https://discord.com/developers/applications
-3. Utwórz bota i skopiuj token
-4. Zaproś bota na swój serwer z odpowiednimi uprawnieniami
    - `discord.bot_token` - token bota
    - `discord.guild_id` - ID Twojego serwera
    - `discord.user_id` - Twoje Discord User ID
    - `discord.channel_id` - ID kanału do powiadomień (opcjonalne, jeśli puste - wyśle DM)
-
-Więcej informacji w pliku `DISCORD_SETUP.md`.
 
 ### Opcje konfiguracji
 

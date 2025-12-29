@@ -50,6 +50,10 @@ cd app
 python build_exe.py
 ```
 
+### Konfiguracja
+
+📖 **Poradnik konfiguracji Discord:** [app/DISCORD_SETUP.md](app/DISCORD_SETUP.md)
+
 Więcej informacji w katalogu `app/`.
 
 ## Wymagania
