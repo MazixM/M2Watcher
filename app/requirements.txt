@@ -3,6 +3,5 @@ pywin32>=305; sys_platform == 'win32'
 requests>=2.31.0
 discord.py>=2.3.0
 pyinstaller>=5.13.0
-pyarmor>=8.4.0
 flask>=2.3.0
 

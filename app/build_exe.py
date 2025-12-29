@@ -1,6 +1,6 @@
 """
-Skrypt do budowania exe z obfuskacją kodu
-Używa PyInstaller + PyArmor do ochrony kodu
+Skrypt do budowania exe
+Używa PyInstaller do kompilacji aplikacji
 """
 import os
 import sys
@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 def build_exe():
-    """Buduje exe z obfuskacją"""
+    """Buduje exe używając PyInstaller"""
     
     # Ustaw kodowanie UTF-8 dla stdout/stderr (potrzebne w Windows CI)
     if sys.platform == 'win32':
@@ -20,24 +20,12 @@ def build_exe():
         except (AttributeError, ImportError):
             pass  # Jeśli nie można zmienić, kontynuuj z domyślnym
     
-    # Zmienne do śledzenia statusu
-    obfuscation_success = False
-    obfuscation_warnings = []
     build_success = False
     build_warnings = []
     
     print("=" * 60)
-    print("Budowanie M2Watcher.exe z obfuskacją")
+    print("Budowanie M2Watcher.exe")
     print("=" * 60)
-    
-    # Sprawdź czy PyArmor jest zainstalowany
-    try:
-        import pyarmor
-        print("✓ PyArmor zainstalowany")
-    except ImportError:
-        print("✗ PyArmor nie jest zainstalowany")
-        print("Instalowanie PyArmor...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pyarmor"], check=True)
     
     # Sprawdź czy PyInstaller jest zainstalowany
     try:
@@ -48,88 +36,11 @@ def build_exe():
         print("Instalowanie PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
     
-    # Krok 1: Obfuskacja kodu (opcjonalna)
-    print("\n[1/3] Obfuskacja kodu...")
+    # Krok 1: Budowanie exe
+    print("\n[1/2] Budowanie exe...")
     
-    # Sprawdź czy pyarmor jest dostępny jako komenda
-    try:
-        result = subprocess.run(["pyarmor", "--version"], 
-                              capture_output=True, 
-                              text=True, 
-                              timeout=5)
-        pyarmor_available = result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pyarmor_available = False
-    
-    if not pyarmor_available:
-        print("  ⚠ PyArmor nie jest dostępny jako komenda - pomijam obfuskację")
-        print("  💡 Aby użyć obfuskacji, zainstaluj PyArmor i upewnij się że jest w PATH")
-        print("  💡 Lub użyj: pip install pyarmor && pyarmor gen --help")
-        obfuscated_dir = None
-        obfuscation_warnings.append("PyArmor nie jest dostępny - kod nie został zobfuskowany")
-    else:
-        obfuscated_dir = Path("obfuscated")
-        if obfuscated_dir.exists():
-            shutil.rmtree(obfuscated_dir)
-        
-        # Obfuskuj główne pliki
-        files_to_obfuscate = ["main.py", "m2watcher.py", "config.py", "notifications.py", "discord_bot.py"]
-        obfuscated_files = []
-        failed_files = []
-        
-        for file in files_to_obfuscate:
-            if Path(file).exists():
-                print(f"  Obfuskowanie {file}...")
-                try:
-                    subprocess.run([
-                        "pyarmor", "gen",
-                        "--output", str(obfuscated_dir),
-                        file
-                    ], check=True, timeout=60)
-                    obfuscated_files.append(file)
-                except subprocess.CalledProcessError as e:
-                    print(f"  ⚠ Błąd obfuskacji {file}: {e}")
-                    print("  💡 Kontynuuję bez obfuskacji tego pliku")
-                    failed_files.append(file)
-                    obfuscation_warnings.append(f"Nie udało się zobfuskowac {file}")
-                except subprocess.TimeoutExpired:
-                    print(f"  ⚠ Timeout podczas obfuskacji {file}")
-                    print("  💡 Kontynuuję bez obfuskacji tego pliku")
-                    failed_files.append(file)
-                    obfuscation_warnings.append(f"Timeout podczas obfuskacji {file}")
-        
-        # Sprawdź czy obfuskacja się powiodła
-        if obfuscated_files and obfuscated_dir.exists():
-            main_obfuscated = obfuscated_dir / "main.py"
-            if main_obfuscated.exists():
-                obfuscation_success = True
-                print(f"  ✓ Zobfuskowano {len(obfuscated_files)}/{len(files_to_obfuscate)} plików")
-            else:
-                obfuscation_warnings.append("Główny plik main.py nie został zobfuskowany")
-        else:
-            obfuscation_warnings.append("Obfuskacja nie powiodła się - używane będą oryginalne pliki")
-    
-    # Krok 2: Budowanie exe
-    print("\n[2/3] Budowanie exe...")
-    
-    # Określ pliki źródłowe (obfuskowane lub oryginalne)
-    # UWAGA: Główny plik to main.py, nie m2watcher.py!
-    if obfuscated_dir and obfuscated_dir.exists():
-        main_file = obfuscated_dir / "main.py"
-        m2watcher_file = obfuscated_dir / "m2watcher.py"
-        config_file = obfuscated_dir / "config.py"
-        notifications_file = obfuscated_dir / "notifications.py"
-        discord_bot_file = obfuscated_dir / "discord_bot.py" if (obfuscated_dir / "discord_bot.py").exists() else None
-        
-        if not main_file.exists():
-            print("  ⚠ Obfuskowany plik główny nie istnieje, używam oryginalnego")
-            main_file = Path("main.py")
-    else:
-        main_file = Path("main.py")
-        m2watcher_file = Path("m2watcher.py")
-        config_file = Path("config.py")
-        notifications_file = Path("notifications.py")
-        discord_bot_file = Path("discord_bot.py") if Path("discord_bot.py").exists() else None
+    # Główny plik to main.py
+    main_file = Path("main.py")
     
     # Sprawdź czy główny plik istnieje
     if not main_file.exists():
@@ -144,11 +55,6 @@ def build_exe():
         "--name", "M2Watcher",
         "--console",
     ]
-    
-    # Dodaj pliki pomocnicze jeśli istnieją
-    # PyInstaller automatycznie wykryje importy, ale możemy dodać dodatkowe pliki
-    # UWAGA: W trybie --onefile pliki są pakowane do tymczasowego katalogu
-    # Moduły Python są automatycznie wykrywane przez PyInstaller
     
     # Dodaj ukryte importy - wszystkie wymagane moduły
     hidden_imports = [
@@ -218,8 +124,8 @@ def build_exe():
         build_warnings.append(f"Błąd budowania: {e}")
         return
     
-    # Krok 3: Czyszczenie
-    print("\n[3/3] Czyszczenie...")
+    # Krok 2: Czyszczenie
+    print("\n[2/2] Czyszczenie...")
     
     # Sprawdź czy jesteśmy w trybie CI (nieinteraktywnym)
     is_ci = os.getenv("CI") == "true" or os.getenv("NON_INTERACTIVE") == "true"
@@ -262,22 +168,6 @@ def build_exe():
         print(f"\n✗ BŁĄD: Plik exe nie został utworzony")
         build_warnings.append("Plik exe nie istnieje w katalogu dist/")
     
-    # Status obfuskacji
-    print(f"\n📦 STATUS OBFUSKACJI:")
-    if obfuscation_success:
-        print("  ✓ Kod został zobfuskowany")
-    else:
-        print("  ⚠ Kod NIE został zobfuskowany")
-        if obfuscation_warnings:
-            print("  Powody:")
-            for warning in obfuscation_warnings:
-                print(f"    • {warning}")
-        print("  ⚠ UWAGA: Plik exe zawiera nieobfuskowany kod źródłowy!")
-        print("  💡 Aby włączyć obfuskację:")
-        print("     1. Zainstaluj PyArmor: pip install pyarmor")
-        print("     2. Upewnij się że 'pyarmor' jest w PATH")
-        print("     3. Uruchom ponownie: python build_exe.py")
-    
     # Ostrzeżenia budowania
     if build_warnings:
         print(f"\n⚠ OSTRZEŻENIA BUDOWANIA:")
@@ -287,11 +177,7 @@ def build_exe():
     # Podsumowanie
     print(f"\n{'=' * 60}")
     if build_success and exe_exists:
-        if obfuscation_success:
-            print("✓ Budowanie zakończone pomyślnie z obfuskacją!")
-        else:
-            print("✓ Budowanie zakończone pomyślnie (BEZ obfuskacji)")
-            print("⚠ Kod źródłowy nie jest chroniony przed dekompilacją")
+        print("✓ Budowanie zakończone pomyślnie!")
     else:
         print("✗ Budowanie zakończone z błędami")
         print("  Sprawdź komunikaty powyżej i popraw błędy")
@@ -299,4 +185,3 @@ def build_exe():
 
 if __name__ == "__main__":
     build_exe()
-
