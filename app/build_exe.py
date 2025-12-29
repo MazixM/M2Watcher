@@ -73,7 +73,7 @@ def build_exe():
             shutil.rmtree(obfuscated_dir)
         
         # Obfuskuj główne pliki
-        files_to_obfuscate = ["m2watcher.py", "config.py", "notifications.py"]
+        files_to_obfuscate = ["main.py", "m2watcher.py", "config.py", "notifications.py", "discord_bot.py"]
         obfuscated_files = []
         failed_files = []
         
@@ -100,12 +100,12 @@ def build_exe():
         
         # Sprawdź czy obfuskacja się powiodła
         if obfuscated_files and obfuscated_dir.exists():
-            main_obfuscated = obfuscated_dir / "m2watcher.py"
+            main_obfuscated = obfuscated_dir / "main.py"
             if main_obfuscated.exists():
                 obfuscation_success = True
                 print(f"  ✓ Zobfuskowano {len(obfuscated_files)}/{len(files_to_obfuscate)} plików")
             else:
-                obfuscation_warnings.append("Główny plik m2watcher.py nie został zobfuskowany")
+                obfuscation_warnings.append("Główny plik main.py nie został zobfuskowany")
         else:
             obfuscation_warnings.append("Obfuskacja nie powiodła się - używane będą oryginalne pliki")
     
@@ -113,18 +113,23 @@ def build_exe():
     print("\n[2/3] Budowanie exe...")
     
     # Określ pliki źródłowe (obfuskowane lub oryginalne)
+    # UWAGA: Główny plik to main.py, nie m2watcher.py!
     if obfuscated_dir and obfuscated_dir.exists():
-        main_file = obfuscated_dir / "m2watcher.py"
+        main_file = obfuscated_dir / "main.py"
+        m2watcher_file = obfuscated_dir / "m2watcher.py"
         config_file = obfuscated_dir / "config.py"
         notifications_file = obfuscated_dir / "notifications.py"
+        discord_bot_file = obfuscated_dir / "discord_bot.py" if (obfuscated_dir / "discord_bot.py").exists() else None
         
         if not main_file.exists():
             print("  ⚠ Obfuskowany plik główny nie istnieje, używam oryginalnego")
-            main_file = Path("m2watcher.py")
+            main_file = Path("main.py")
     else:
-        main_file = Path("m2watcher.py")
+        main_file = Path("main.py")
+        m2watcher_file = Path("m2watcher.py")
         config_file = Path("config.py")
         notifications_file = Path("notifications.py")
+        discord_bot_file = Path("discord_bot.py") if Path("discord_bot.py").exists() else None
     
     # Sprawdź czy główny plik istnieje
     if not main_file.exists():
@@ -141,23 +146,17 @@ def build_exe():
     ]
     
     # Dodaj pliki pomocnicze jeśli istnieją
-    additional_files = []
-    for file_path, name in [
-        (config_file, "config.py"),
-        (notifications_file, "notifications.py")
-    ]:
-        if file_path.exists():
-            # Format dla Windows: "source;destination"
-            additional_files.append(f"{file_path};.")
-    
-    if additional_files:
-        for file_data in additional_files:
-            pyinstaller_args.extend(["--add-data", file_data])
+    # PyInstaller automatycznie wykryje importy, ale możemy dodać dodatkowe pliki
+    # UWAGA: W trybie --onefile pliki są pakowane do tymczasowego katalogu
+    # Moduły Python są automatycznie wykrywane przez PyInstaller
     
     # Dodaj ukryte importy - wszystkie wymagane moduły
     hidden_imports = [
+        "main",
+        "m2watcher",
         "config",
         "notifications",
+        "discord_bot",
         "psutil",
         "psutil._pswindows",
         "psutil._psutil_windows",
@@ -173,6 +172,7 @@ def build_exe():
         "discord",
         "discord.ext.commands",
         "discord.ext.tasks",
+        "pywintypes",
     ]
     
     for module in hidden_imports:

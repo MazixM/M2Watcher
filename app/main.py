@@ -2,8 +2,16 @@
 Główny plik uruchomieniowy M2Watcher
 """
 import sys
-from config import Config
-from m2watcher import Metin2Watcher
+import traceback
+
+try:
+    from config import Config
+    from m2watcher import Metin2Watcher
+except ImportError as e:
+    print(f"Błąd importu modułów: {e}")
+    print(f"Python path: {sys.path}")
+    traceback.print_exc()
+    sys.exit(1)
 
 # Import bota Discord (opcjonalny)
 try:
@@ -16,8 +24,14 @@ except ImportError:
 
 def main():
     """Główna funkcja"""
-    # Uruchom aplikację
-    config = Config()
+    try:
+        # Uruchom aplikację
+        config = Config()
+    except Exception as e:
+        print(f"Błąd podczas inicjalizacji konfiguracji: {e}")
+        traceback.print_exc()
+        input("Naciśnij Enter aby zakończyć...")
+        sys.exit(1)
     
     # Uruchom bota Discord jeśli jest włączony
     discord_bot = None
@@ -49,9 +63,28 @@ def main():
     # Zastąp notification_manager w watcherze naszym z botem
     watcher.notification_manager = notification_manager
     
-    watcher.run(show_status=config.get("show_status", True))
+    try:
+        watcher.run(show_status=config.get("show_status", True))
+    except KeyboardInterrupt:
+        print("\n\nZatrzymywanie aplikacji...")
+        if discord_bot:
+            try:
+                discord_bot.stop()
+            except:
+                pass
+    except Exception as e:
+        print(f"\n\nBłąd krytyczny: {e}")
+        traceback.print_exc()
+        input("Naciśnij Enter aby zakończyć...")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Błąd krytyczny w main(): {e}")
+        traceback.print_exc()
+        input("Naciśnij Enter aby zakończyć...")
+        sys.exit(1)
 
