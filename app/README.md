@@ -1,129 +1,93 @@
-# M2Watcher - Aplikacja kliencka
+# M2Watcher: szczegóły techniczne
 
-Monitor klientów Metin2 z wykrywaniem zamknięć i wylogowań.
+Instrukcja dla użytkownika jest w [głównym README](../README.md), konfiguracja Discorda w [DISCORD_SETUP.md](DISCORD_SETUP.md).
 
-## Funkcje
-
-- ✅ Automatyczne wykrywanie uruchomionych klientów Metin2
-- ⚠️ Wykrywanie zamknięcia klienta (proces lub okno)
-- 🔴 Wykrywanie wylogowania (ekran logowania)
-- 🟢 Wykrywanie ponownego zalogowania
-- 📊 Wyświetlanie statusu wszystkich klientów
-- 🔔 Powiadomienia Discord
-- 🔊 Powiadomienia dźwiękowe
-
-## Wymagania
-
-- Python 3.7+
-- Windows (wymagane dla pełnej funkcjonalności)
-
-## Instalacja
-
-### Opcja 1: Pobierz gotowy plik exe (zalecane)
-
-Gotowy plik wykonywalny można pobrać z sekcji [Releases](https://github.com/MazixM/M2Watcher/releases):
-
-1. Przejdź do [Releases](https://github.com/MazixM/M2Watcher/releases)
-2. Wybierz najnowszą wersję
-3. Pobierz plik `M2Watcher-*.zip`
-4. Rozpakuj i uruchom `M2Watcher.exe`
-
-**Uwaga:** Plik exe jest samodzielny i **nie wymaga** instalacji Pythona ani dodatkowych bibliotek. Wszystkie zależności są już wbudowane w plik exe.
-
-### Opcja 2: Zbuduj z kodu źródłowego
+## Uruchamianie z kodu źródłowego
 
 ```bash
+cd app
 pip install -r requirements.txt
+python main.py            # okno aplikacji
+python main.py --setup    # wymuś kreator konfiguracji
+python main.py --console  # tryb tekstowy bez okna (Enter = zatrzymaj alarm)
 ```
 
-## Konfiguracja
-
-Konfiguracja jest automatycznie tworzona przy pierwszym uruchomieniu w `~/.m2watcher/config.json`.
-
-Możesz też skopiować `config.example.json`:
-
-```bash
-cp config.example.json ~/.m2watcher/config.json
-```
-
-### Konfiguracja Discord
-
-📖 **Szczegółowy poradnik konfiguracji:** [DISCORD_SETUP.md](DISCORD_SETUP.md)
-
-Szybki start:
-1. Utwórz swój własny serwer Discord
-2. Utwórz aplikację na https://discord.com/developers/applications
-3. Utwórz bota i skopiuj token
-4. Zaproś bota na swój serwer z odpowiednimi uprawnieniami
-5. Ustaw w konfiguracji:
-   - `discord.bot_token` - token bota
-   - `discord.guild_id` - ID Twojego serwera
-   - `discord.user_id` - Twoje Discord User ID
-   - `discord.channel_id` - ID kanału do powiadomień (opcjonalne, jeśli puste - wyśle DM)
-
-### Opcje konfiguracji
-
-Wszystkie opcje są konfigurowane w pliku `~/.m2watcher/config.json`:
-
-- `check_interval` - Interwał sprawdzania w sekundach (domyślnie: 2.0)
-- `network_check_samples` - Liczba próbek aktywności sieciowej do analizy (domyślnie: 5)
-- `network_threshold` - Próg aktywności sieciowej w bajtach - poniżej tego uznaje za wylogowanie (domyślnie: 1000)
-- `debug` - Tryb debugowania - wyświetla dodatkowe informacje (domyślnie: false)
-- `sound_enabled` - Włącza/wyłącza powiadomienia dźwiękowe (domyślnie: true)
-- `sound_wait_for_input` - Czy dźwięk ma się powtarzać aż użytkownik naciśnie Enter (domyślnie: true)
-- `show_status` - Wyświetla status wszystkich klientów w konsoli (domyślnie: true)
-
-## Użycie
-
-```bash
-python main.py
-```
+Wymagany Python 3.10+ z `tkinter` (instalator z python.org ma go domyślnie).
 
 ## Budowanie exe
 
 ```bash
-python build_exe.py
+cd app
+pip install -r requirements-build.txt
+python build_exe.py       # → dist/M2Watcher.exe (jeden plik, bez okna konsoli)
 ```
 
-Plik exe będzie w katalogu `dist/M2Watcher.exe`.
+CI (`.github/workflows/build.yml`) na każdym pushu/PR uruchamia testy na Windowsie i buduje exe. Uruchomienie ręczne z podanym `release_tag` tworzy release z plikiem zip.
 
-## Jak działa
+## Testy
 
-Aplikacja działa w sposób całkowicie pasywny - **nie modyfikuje** i **nie ingeruje** w działanie klienta gry Metin2. 
+```bash
+cd app
+python -m unittest discover -s tests -v
+```
 
-Program monitoruje system operacyjny i wykrywa:
-1. **Zamknięcie klienta** - sprawdza czy proces Metin2 lub jego okno nadal istnieje w systemie
-2. **Wylogowanie** - analizuje aktywność sieciową procesu (sprawdza połączenia TCP w stanie ESTABLISHED). Gdy aktywność spada poniżej progu, oznacza to wylogowanie
-3. **Ponowne zalogowanie** - gdy aktywność sieciowa wzrasta, oznacza to ponowne zalogowanie
+Testy nie wymagają Windowsa ani internetu: kolejka Discorda, ponawianie, migracja konfiguracji, wykrywanie wylogowania, dźwięki.
 
-Aplikacja **nie używa**:
-- Modifikacji pamięci procesu gry
-- Wstrzykiwania kodu do procesu gry
-- Czytania pamięci procesu gry
-- Interakcji z oknem gry (kliknięcia, wpisywanie tekstu)
-- Analizy obrazu ekranu
+## Struktura
 
-Aplikacja korzysta wyłącznie z publicznych API systemu Windows do:
-- Listowania procesów
-- Sprawdzania aktywności sieciowej procesów
-- Wykrywania okien aplikacji
+| Plik | Odpowiedzialność |
+|---|---|
+| `main.py` | start: log, konfiguracja, blokada drugiej kopii, GUI lub konsola |
+| `controller.py` | łączy monitor, dźwięki i Discord; kolejka zdarzeń do interfejsu |
+| `m2watcher.py` | monitor procesów w osobnym wątku (bez blokowania) |
+| `discord_client.py` | wysyłka REST (webhook/bot), trwała kolejka `outbox.json`, ponawianie |
+| `notifications.py` | treść powiadomień (nazwa urządzenia, kolory, pola) |
+| `sounds.py` | dźwięki WAV: wbudowane, własne pliki, głośność, pętla alarmu |
+| `config.py` | `config.json`: domyślne wartości, migracja ze starej wersji, zapis atomowy |
+| `app_logging.py` | log do pliku z rotacją + przechwytywanie nieobsłużonych wyjątków |
+| `gui/` | okno główne, kreator pierwszego uruchomienia, ustawienia |
 
-## ⚠️ Ważne informacje
+## Konfiguracja (`%USERPROFILE%\.m2watcher\config.json`)
 
-**Odpowiedzialność:** Według autora, aplikacja nie łamie regulaminu gry Metin2, ponieważ działa w sposób całkowicie pasywny i nie ingeruje w działanie klienta gry. Jednak **używasz aplikacji na własną odpowiedzialność**. Autor nie ponosi odpowiedzialności za ewentualne konsekwencje wynikające z użycia aplikacji.
+Zwykle edytujesz ją w oknie **Ustawienia**. Pełny przykład: [config.example.json](config.example.json).
+
+| Klucz | Domyślnie | Opis |
+|---|---|---|
+| `device_name` | nazwa komputera | nazwa widoczna w powiadomieniach |
+| `process_names` | `["metin2client.exe"]` | nazwy pliku gry (bez rozróżniania wielkości liter, `.exe` opcjonalne) |
+| `check_interval` | `2.0` | co ile sekund sprawdzać klienty |
+| `logout_grace_seconds` | `5.0` | po ilu sekundach bez połączenia uznać wylogowanie |
+| `start_minimized` | `false` | start zminimalizowany |
+| `debug` | `false` | szczegółowe logi |
+| `discord.method` | `none` | `webhook`, `bot` albo `none` |
+| `discord.webhook_url` | | adres webhooka |
+| `discord.bot_token` / `discord.channel_id` | | dla metody `bot`; brak kanału = wiadomość prywatna |
+| `discord.user_id` / `discord.mention_user` | `""` / `true` | kogo oznaczać (@) |
+| `discord.notify_events.<zdarzenie>` | `true` | `logout`, `closed`, `reconnect` |
+| `sounds.enabled` / `sounds.volume` | `true` / `80` | dźwięk i głośność 0–100 |
+| `sounds.repeat_until_ack` | `true` | alarm powtarza się do kliknięcia „Zatrzymaj alarm” |
+| `sounds.max_alarm_seconds` | `300` | automatyczne wyciszenie (0 = nigdy) |
+| `sounds.events.<zdarzenie>.sound` | | `builtin:alarm`, `builtin:syrena`, `builtin:dzwonek`, `builtin:ping`, `custom` lub `none` |
+| `sounds.events.<zdarzenie>.file` | | ścieżka do pliku `.wav` dla `custom` |
+
+Konfiguracja ze starszej wersji (`discord.enabled`, `sound_enabled`, `sound_wait_for_input`…) jest przenoszona automatycznie. Uszkodzony plik jest odkładany jako `config.broken.json`, a aplikacja startuje z ustawieniami domyślnymi.
+
+## Wykrywanie
+
+- **Zamknięcie:** proces zniknął albo jego okno przestało istnieć. Minimalizacja okna nie jest zamknięciem.
+- **Wylogowanie:** proces nie ma połączenia TCP `ESTABLISHED` dłużej niż `logout_grace_seconds`.
+- **Ponowne zalogowanie:** połączenie wróciło.
+
+Zdarzenia trafiają jednocześnie do dźwięku, do kolejki Discord i do historii w oknie. Monitor działa w osobnym wątku, więc alarm ani wysyłka nie wstrzymują sprawdzania.
 
 ## Rozwiązywanie problemów
 
-**Program nie wykrywa wylogowań:**
-- Zwiększ liczbę próbek w konfiguracji: `"network_check_samples": 10`
-- Obniż próg w konfiguracji: `"network_threshold": 500`
+| Problem | Rozwiązanie |
+|---|---|
+| Nie wykrywa klienta | Sprawdź nazwę pliku gry w Menedżerze zadań → Szczegóły i wpisz ją w Ustawienia → Ogólne. |
+| Fałszywe alarmy przy lagach | Zwiększ „Wylogowanie po braku połączenia” (np. 15 s). |
+| Brak dźwięku | Ustawienia → Dźwięki → „Odsłuchaj”. Sprawdź w mikserze głośności Windows, czy M2Watcher nie jest wyciszony. Własny plik musi być `.wav`. |
+| Discord nie działa | Karta „Discord” w oknie pokazuje przyczynę. Patrz [DISCORD_SETUP.md](DISCORD_SETUP.md#rozwiązywanie-problemów). |
+| „M2Watcher jest już uruchomiony” | Aplikacja działa już w tle (sprawdź pasek zadań). Dwie kopie dawałyby podwójne alarmy. |
 
-**Program zbyt często wykrywa wylogowania:**
-- Zwiększ próg w konfiguracji: `"network_threshold": 2000`
-- Zwiększ liczbę próbek w konfiguracji: `"network_check_samples": 7`
-
-## Wsparcie projektu
-
-Jeśli aplikacja jest dla Ciebie przydatna, możesz wesprzeć projekt dobrowolną dotacją:
-
-💙 [Wesprzyj projekt na Tipply](https://tipply.pl/u/mazix)
+Przy każdym zgłoszeniu dołącz `%USERPROFILE%\.m2watcher\logs\m2watcher.log` (przycisk „Otwórz folder logów”).

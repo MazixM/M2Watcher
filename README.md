@@ -1,58 +1,59 @@
 # M2Watcher
 
-Aplikacja do monitorowania klientów Metin2.
+Pilnuje Twoich klientów Metin2 i daje znać, gdy któryś się **wyloguje** albo **zamknie**: głośnym alarmem na komputerze i wiadomością na **Discordzie** (także na telefonie).
 
-### Instalacja
+## Szybki start (3 kroki)
 
-**Gotowy plik exe:** Pobierz z [Releases](https://github.com/MazixM/M2Watcher/releases)
+1. Pobierz najnowszy `M2Watcher-*.zip` z [Releases](https://github.com/MazixM/M2Watcher/releases) i rozpakuj.
+2. Uruchom `M2Watcher.exe`. Nie trzeba instalować Pythona ani niczego innego.
+3. Przejdź kreator (ok. 2 minuty):
+   - wpisz **nazwę urządzenia**, np. „Laptop” albo „PC w pokoju”. Pojawi się w każdym powiadomieniu, więc przy kilku komputerach od razu wiesz, skąd przyszedł alert;
+   - wklej **adres webhooka Discord** ([jak go zdobyć — 1 minuta](app/DISCORD_SETUP.md)) i kliknij „Wyślij wiadomość testową”;
+   - wybierz dźwięki i głośność.
 
-**Lub zbuduj z kodu źródłowego:**
-```bash
-cd app
-pip install -r requirements.txt
-```
+Gotowe. Zostaw aplikację uruchomioną (możesz ją zminimalizować). Wszystko zmienisz później w **⚙ Ustawienia**.
 
-### Użycie
+> Windows SmartScreen może ostrzec przed nieznanym programem. Kliknij „Więcej informacji” → „Uruchom mimo to”.
 
-```bash
-cd app
-python main.py
-```
+## Co potrafi
 
-### Budowanie exe
+- ✅ Sam wykrywa uruchomione klienty Metin2 (nazwę pliku gry można zmienić dla serwerów prywatnych)
+- 🔴 Wykrywa wylogowanie (klient stracił połączenie z serwerem gry)
+- ⚠️ Wykrywa zamknięcie lub crash klienta
+- 🟢 Wykrywa ponowne zalogowanie
+- 🔔 Powiadomienia Discord z nazwą urządzenia i oznaczeniem (@) Ciebie
+- 📶 **Brak internetu nie gubi powiadomień.** Czekają w kolejce i wychodzą, gdy sieć wróci, z dopiskiem, o której zdarzenie wykryto
+- 🔊 Własne dźwięki dla każdego zdarzenia (wbudowane albo Twój plik `.wav`) i regulacja głośności w aplikacji
+- 🪟 Czytelne okno: lista klientów, status Discorda, historia zdarzeń, duży przycisk „Zatrzymaj alarm”
+- 📝 Log błędów do pliku (przycisk „Otwórz folder logów”)
 
-```bash
-cd app
-python build_exe.py
-```
+## Jak to działa
 
-### Konfiguracja
+Aplikacja działa **całkowicie pasywnie**: nie modyfikuje klienta gry i nie ingeruje w jego działanie. Korzysta tylko z publicznych informacji systemu Windows:
 
-📖 **Poradnik konfiguracji Discord:** [app/DISCORD_SETUP.md](app/DISCORD_SETUP.md)
+- lista procesów i okien, żeby wykryć zamknięcie,
+- liczba połączeń sieciowych procesu gry, żeby wykryć wylogowanie. Klient na ekranie logowania nie ma połączenia z serwerem gry; gdy połączenia nie ma dłużej niż kilka sekund (ustawiane), to wylogowanie.
 
-Więcej informacji w katalogu `app/`.
+Aplikacja **nie** czyta pamięci gry, nie wstrzykuje kodu, nie klika w okno i nie analizuje obrazu.
 
-### Jak działa aplikacja
+**Odpowiedzialność:** według autora aplikacja nie łamie regulaminu gry, bo działa pasywnie. Jednak **używasz jej na własną odpowiedzialność**. Autor nie odpowiada za ewentualne konsekwencje.
 
-Aplikacja działa w sposób całkowicie pasywny - **nie modyfikuje** i **nie ingeruje** w działanie klienta gry Metin2. Program monitoruje system operacyjny (procesy, okna, aktywność sieciową) i wykrywa zamknięcia oraz wylogowania. Aplikacja nie używa modyfikacji pamięci, wstrzykiwania kodu, czytania pamięci procesu gry ani analizy obrazu ekranu - korzysta wyłącznie z publicznych API systemu Windows.
+## Pliki aplikacji
 
-### ⚠️ Ważne informacje
+Wszystko leży w `%USERPROFILE%\.m2watcher\`:
 
-**Odpowiedzialność:** Według autora, aplikacja nie łamie regulaminu gry Metin2, ponieważ działa w sposób całkowicie pasywny i nie ingeruje w działanie klienta gry. Jednak **używasz aplikacji na własną odpowiedzialność**. Autor nie ponosi odpowiedzialności za ewentualne konsekwencje wynikające z użycia aplikacji.
+| Plik | Co to jest |
+|---|---|
+| `config.json` | ustawienia (edytujesz je w oknie Ustawienia) |
+| `logs\m2watcher.log` | log błędów — **dołącz go przy zgłaszaniu problemu** |
+| `outbox.json` | powiadomienia czekające na wysłanie (np. gdy nie było internetu) |
 
-### Funkcje
-
-- ✅ Automatyczne wykrywanie uruchomionych klientów Metin2
-- ⚠️ Wykrywanie zamknięcia klienta (proces lub okno)
-- 🔴 Wykrywanie wylogowania (ekran logowania)
-- 🟢 Wykrywanie ponownego zalogowania
-- 📊 Wyświetlanie statusu wszystkich klientów
-- 🔔 Powiadomienia Discord
+Szczegóły techniczne, uruchamianie z kodu źródłowego i rozwiązywanie problemów: [app/README.md](app/README.md).
 
 ## Wymagania
 
-- Python 3.7+ (Jeśli uruchamiana jest wersja exe, to python nie jest wymagany)
-- System operacyjny Windows
+- Windows 10 lub 11
+- (tylko przy uruchamianiu z kodu) Python 3.10+
 
 ## Wsparcie projektu
 
