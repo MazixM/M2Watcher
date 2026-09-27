@@ -22,7 +22,19 @@ pip install -r requirements-build.txt
 python build_exe.py       # → dist/M2Watcher.exe (jeden plik, bez okna konsoli)
 ```
 
-CI (`.github/workflows/build.yml`) na każdym pushu/PR uruchamia testy na Windowsie i buduje exe. Uruchomienie ręczne z podanym `release_tag` tworzy release z plikiem zip.
+## Wydania (release)
+
+CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie i buduje exe (artefakt do pobrania z zakładki Actions).
+
+**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z plikiem `M2Watcher-<commit>.zip` i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
+
+Numer wersji:
+- bazą jest `__version__` w `app/version.py`,
+- jeśli release z tą wersją już istnieje, patch podbija się automatycznie (`2.0.0` → `2.0.1` → `2.0.2`…),
+- żeby wydać nową wersję minor/major, zmień `app/version.py` (np. na `2.1.0`) w PR-ze.
+
+Release można też utworzyć ręcznie: Actions → Build EXE → Run workflow → zaznacz „Utwórz release”.
+Numer wersji liczy `.github/scripts/next_version.py`, a opis `.github/scripts/release_notes.sh`.
 
 ## Testy
 
