@@ -25,6 +25,7 @@ def main() -> int:
         "--name", "M2Watcher",
         # pywin32 bywa pomijany przez analizę importów
         "--hidden-import", "win32gui", "--hidden-import", "win32process", "--hidden-import", "pywintypes",
+        "--hidden-import", "winsound",
         "--exclude-module", "numpy", "--exclude-module", "matplotlib", "--exclude-module", "PIL",
         "main.py",
     ]

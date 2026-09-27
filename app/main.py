@@ -113,10 +113,44 @@ def run_console(config) -> int:
     return 0
 
 
+def self_test() -> int:
+    """Sprawdza, czy w exe są wszystkie moduły potrzebne w działaniu (uruchamiane w CI).
+
+    Wynik trafia do logu i do kodu wyjścia (0 = OK) — exe nie ma konsoli.
+    """
+    import importlib
+    problems = []
+    modules = ["tkinter", "psutil", "requests", "controller", "gui.main_window", "gui.settings"]
+    if sys.platform == "win32":
+        modules += ["winsound", "win32gui", "win32process", "pywintypes"]
+    for name in modules:
+        try:
+            importlib.import_module(name)
+        except Exception as e:
+            problems.append(f"{name}: {e}")
+    try:
+        import tempfile
+        from pathlib import Path
+
+        import sounds
+        player = sounds.SoundPlayer(lambda: {}, cache_dir=Path(tempfile.mkdtemp()))
+        for name in sounds.BUILTIN_SOUNDS:
+            player.resolve_file(f"builtin:{name}", "", 50)
+        if sys.platform == "win32" and sounds.winsound is None:
+            problems.append("sounds.winsound nie został załadowany")
+    except Exception as e:
+        problems.append(f"sounds: {e}")
+    for p in problems:
+        log.error("Self-test: %s", p)
+    log.info("Self-test: %s", "OK" if not problems else f"{len(problems)} problemów")
+    return 1 if problems else 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="M2Watcher — monitor klientów Metin2")
     parser.add_argument("--console", action="store_true", help="tryb tekstowy bez okna")
     parser.add_argument("--setup", action="store_true", help="pokaż kreator konfiguracji")
+    parser.add_argument("--self-test", action="store_true", help="sprawdź spakowane moduły i zakończ")
     args = parser.parse_args(argv)
 
     # Konfiguracja przed logiem, bo poziom logowania zależy od ustawienia "debug"
@@ -128,6 +162,9 @@ def main(argv=None) -> int:
     log.info("Plik konfiguracji: %s | log: %s", config.path, log_path)
     if config.load_error:
         log.error(config.load_error)
+
+    if args.self_test:
+        return self_test()
 
     if not acquire_single_instance():
         show_fatal("M2Watcher jest już uruchomiony.\nSprawdź pasek zadań.")

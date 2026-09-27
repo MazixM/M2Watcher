@@ -13,7 +13,6 @@ Teraz odtwarzamy zwykłe pliki WAV przez ``winsound.PlaySound``:
   regulacja głośności w ustawieniach aplikacji.
 """
 import array
-import importlib
 import io
 import logging
 import math
@@ -32,8 +31,11 @@ from config import app_dir
 log = logging.getLogger(__name__)
 
 IS_WINDOWS = platform.system() == "Windows"
-# winsound istnieje tylko na Windowsie; Any — żeby analiza typów na innych systemach nie krzyczała
-winsound: Any = importlib.import_module("winsound") if IS_WINDOWS else None
+# winsound istnieje tylko na Windowsie. Import MUSI być zwykłym `import` — PyInstaller
+# wykrywa moduły statycznie i przy imporcie dynamicznym (importlib) nie dołącza ich do exe.
+winsound: Any = None
+if IS_WINDOWS:
+    import winsound  # type: ignore[no-redef]  # noqa: F811
 
 SAMPLE_RATE = 22050
 

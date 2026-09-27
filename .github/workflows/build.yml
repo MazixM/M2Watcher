@@ -100,6 +100,15 @@ jobs:
         $size = (Get-Item "dist/M2Watcher.exe").Length / 1MB
         Write-Output "✓ M2Watcher.exe utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
 
+    - name: Self-test EXE (moduły spakowane w exe)
+      working-directory: ./app
+      shell: pwsh
+      run: |
+        # Test na gotowym exe, nie na Pythonie — łapie moduły pominięte przez PyInstallera
+        $p = Start-Process -FilePath "dist/M2Watcher.exe" -ArgumentList "--self-test" -Wait -PassThru
+        Get-Content "$env:USERPROFILE\.m2watcher\logs\m2watcher.log" -Tail 20
+        if ($p.ExitCode -ne 0) { Write-Error "Self-test exe nie przeszedł (kod $($p.ExitCode))"; exit 1 }
+
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
       with:
