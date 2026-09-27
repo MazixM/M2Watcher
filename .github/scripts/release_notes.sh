@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Generuje opis release'u w formacie dotychczasowych wydań (v.1.0.x).
+# Użycie: release_notes.sh <tag> <sha> <owner/repo> <plik_zip>
+set -euo pipefail
+
+TAG="$1"; SHA="$2"; REPO="$3"; ZIP="$4"
+URL="https://github.com/${REPO}"
+
+# Poprzedni tag w formacie v.X.Y.Z (najwyższy, różny od bieżącego)
+PREV=$(git tag --list 'v*' | grep -E '^v\.?[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$TAG" | sort -V | tail -n1 || true)
+
+echo "## M2Watcher ${TAG}"
+echo
+echo "Automatycznie wygenerowany build z commit: \`${SHA}\`"
+echo
+echo "### 📦 Pobierz"
+echo
+echo "Pobierz plik **${ZIP}** z sekcji Assets poniżej."
+echo
+echo "### 📝 Zmiany"
+echo
+if [ -n "$PREV" ]; then
+  CHANGES=$(git log --no-merges --pretty='format:- %s' "${PREV}..${SHA}" || true)
+  echo "${CHANGES:-- drobne poprawki}"
+  echo
+  echo "Zobacz [commity](${URL}/compare/${PREV}...${SHA})"
+else
+  echo "Zobacz [commity](${URL}/commits/${SHA})"
+fi
+echo
+echo "### ⚙️ Instalacja"
+echo
+echo "1. Pobierz plik ZIP"
+echo "2. Rozpakuj"
+echo "3. Uruchom M2Watcher.exe"
+echo "4. Przejdź kreator pierwszego uruchomienia — [instrukcja konfiguracji Discord](${URL}/blob/main/app/DISCORD_SETUP.md)"
+echo
+echo "Aktualizacja ze starszej wersji: podmień plik exe — ustawienia zostaną przeniesione automatycznie."
