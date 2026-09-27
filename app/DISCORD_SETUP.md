@@ -1,144 +1,69 @@
-# Instrukcja konfiguracji bota Discord dla M2Watcher
+# Powiadomienia Discord: konfiguracja
 
-## Krok 1: Utworzenie aplikacji bota na Discord Developer Portal
+Są dwa sposoby. **Wybierz webhook.** To jeden adres do skopiowania, bez tworzenia bota. Bot jest potrzebny tylko wtedy, gdy chcesz dostawać wiadomości **prywatne** (DM).
 
-1. Przejdź na stronę: https://discord.com/developers/applications
-2. Zaloguj się do swojego konta Discord
-3. Kliknij przycisk **"New Application"** (Nowa aplikacja)
-4. Wprowadź nazwę aplikacji (np. "M2Watcher Bot") i kliknij **"Create"**
+---
 
-## Krok 2: Utworzenie bota
+## Sposób 1: Webhook (zalecany, ok. 1 minuta)
 
-1. W menu po lewej stronie wybierz **"Bot"**
-3. W sekcji **"Token"** kliknij **"Reset Token"** lub **"Copy"** aby skopiować token bota
-   - ⚠️ **WAŻNE**: Zapisz ten token w bezpiecznym miejscu! Będzie potrzebny w konfiguracji.
-   - Token wygląda mniej więcej tak: `MTIzNDU2Nzg5MDEyMzQ1Njc4OTA.Xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-4. Zaznacz:
-   - ✅ Server Members Intent
-   - ✅ Message Content Intent
+### 1. Własny serwer Discord
+Masz już swój serwer? Przejdź do kroku 2. Jeśli nie: w Discordzie kliknij **„+”** (Dodaj serwer) → **„Stwórz własny”** → **„Dla mnie i znajomych”** → nadaj nazwę, np. „M2Watcher”.
 
-## Krok 3: Utworzenie własnego serwera Discord
+### 2. Utwórz webhook
+1. Najedź na kanał tekstowy (np. `#ogólny`) i kliknij **⚙ (Edytuj kanał)**.
+2. **Integracje** → **Webhooki** → **Nowy webhook**.
+3. Kliknij utworzony webhook i **„Kopiuj adres URL webhooka”**.
 
-1. W aplikacji Discord kliknij przycisk **"+"** (Dodaj serwer)
-2. Wybierz **"Stwórz swój własny"**
-3. Nadaj serwerowi nazwę (np. "M2Watcher Notifications")
-4. Kliknij **"Utwórz"**
+Adres wygląda tak: `https://discord.com/api/webhooks/123456789012345678/AbCdEf...`
 
-**Uwaga:** Każdy użytkownik musi mieć swój własny serwer Discord dla powiadomień.
+### 3. Wklej w M2Watcher
+W kreatorze (albo w **⚙ Ustawienia → Discord**):
+1. wybierz **Webhook**,
+2. wklej adres w pole **Adres URL webhooka**,
+3. kliknij **Wyślij wiadomość testową**. Na kanale powinna pojawić się wiadomość z nazwą Twojego urządzenia.
 
-## Krok 4: Dodanie bota na serwer
+### 4. (Zalecane) Oznaczanie, żeby telefon zadzwonił
+Gdy wiadomość Cię oznacza (@), Discord powiadomi Cię nawet przy wyciszonym kanale.
+1. Discord → **Ustawienia użytkownika → Zaawansowane → Tryb dewelopera** (włącz).
+2. Kliknij prawym przyciskiem na swój nick → **„Kopiuj ID użytkownika”**.
+3. Wklej w M2Watcher w pole **Twoje ID użytkownika** i zostaw zaznaczone **Oznaczaj mnie (@)**.
 
-1. W menu po lewej stronie wybierz **"OAuth2"** → **"OAuth2 URL Generator"**
-2. W sekcji **"SCOPES"** zaznacz:
-   - ✅ **bot**
-3. W sekcji **"BOT PERMISSIONS"** zaznacz:
-   - ✅ **Send Messages**
-4. Skopiuj wygenerowany URL (znajduje się na dole strony)
-5. Otwórz ten URL w przeglądarce
-6. Wybierz serwer, na którym chcesz dodać bota
-7. Kliknij **"Authorize"** i potwierdź
+> Adres webhooka traktuj jak hasło: kto go zna, może pisać na Twój kanał. Jeśli wycieknie, usuń webhook w Discordzie i utwórz nowy.
 
-## Krok 5: Pobranie ID serwera (Guild ID)
+---
 
-1. Włącz tryb deweloperski w Discord:
-   - Otwórz Discord
-   - Przejdź do **Ustawienia** → **Zaawansowane** → **Tryb deweloperski** (włącz)
-2. Na serwerze Discord kliknij prawym przyciskiem myszy na nazwę serwera
-3. Wybierz **"Kopiuj ID"** (Copy ID)
-   - To jest Twoje **Guild ID**
+## Sposób 2: Bot (wiadomości prywatne, dla zaawansowanych)
 
-## Krok 6: Pobranie ID użytkownika (User ID)
+> Discord pozwala botowi wysyłać wiadomości dopiero wtedy, gdy choć raz połączył się z Discordem na żywo (gateway). Boty używane w starszej wersji M2Watcher spełniają ten warunek. Nowy bot może zwrócić błąd „Ten bot nigdy nie połączył się z Discordem”; wtedy użyj webhooka.
 
-1. Upewnij się, że tryb deweloperski jest włączony (patrz Krok 5)
-2. Kliknij prawym przyciskiem myszy na swoje imię/avatar w Discord
-3. Wybierz **"Kopiuj ID"** (Copy ID)
-   - To jest Twoje **User ID**
+1. Wejdź na https://discord.com/developers/applications → **New Application** → nadaj nazwę.
+2. Zakładka **Bot** → **Reset Token** → skopiuj token. *Intenty uprzywilejowane nie są potrzebne.*
+3. Zakładka **OAuth2 → URL Generator**: zaznacz scope **bot** i uprawnienie **Send Messages**. Otwórz wygenerowany link i dodaj bota na swój serwer. Bot musi mieć z Tobą wspólny serwer, żeby mógł napisać prywatnie.
+4. W M2Watcher: **⚙ Ustawienia → Discord → Bot Discord**:
+   - **Token bota**: wklej token,
+   - **ID kanału**: zostaw puste, jeśli chcesz DM, albo wpisz ID kanału (prawy klik na kanał → „Kopiuj ID kanału”),
+   - **Twoje ID użytkownika**: wymagane dla DM (patrz krok 4 w sposobie 1).
+5. Kliknij **Wyślij wiadomość testową**.
 
-## Krok 7: Pobranie ID kanału (Channel ID) - opcjonalne, gdy chcemy mieć powiadomienie na 
+> Starsze wersje M2Watcher używały bota z `guild_id`. Twoja konfiguracja zostanie przeniesiona automatycznie; przy pierwszym starcie nowej wersji pokaże się kreator, żeby uzupełnić nazwę urządzenia.
 
-1. Upewnij się, że tryb deweloperski jest włączony
-2. Na swoim serwerze Discord kliknij prawym przyciskiem myszy na kanał, do którego chcesz otrzymywać powiadomienia
-3. Wybierz **"Kopiuj ID"** (Copy ID)
-   - To jest **Channel ID**
-   - **Uwaga:** Jeśli nie podasz `channel_id`, bot wyśle powiadomienia przez DM (prywatną wiadomość)
+---
 
-## Krok 8: Konfiguracja w M2Watcher
+## Kilka komputerów
 
-1. Otwórz plik konfiguracyjny:
-   - Windows: `C:\Users\[TwojaNazwaUżytkownika]\.m2watcher\config.json`
+Na każdym komputerze wpisz **inną nazwę urządzenia**. Wszystkie mogą używać tego samego webhooka. W każdej wiadomości zobaczysz np. „🔴 Wylogowanie — Laptop”.
 
-2. Zaktualizuj sekcję `discord` w pliku `config.json`:
+## Brak internetu
 
-```json
-{
-  "discord": {
-    "enabled": true,
-    "bot_token": "TWÓJ_BOT_TOKEN_TUTAJ",
-    "guild_id": "TWÓJ_GUILD_ID_TUTAJ",
-    "user_id": "TWÓJ_USER_ID_TUTAJ",
-    "channel_id": "TWÓJ_CHANNEL_ID_TUTAJ"
-  }
-}
-```
-
-**Przykład z kanałem:**
-```json
-{
-  "discord": {
-    "enabled": true,
-    "bot_token": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTA.Xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "guild_id": "123456789012345678",
-    "user_id": "987654321098765432",
-    "channel_id": "111111111111111111"
-  }
-}
-```
-
-**Przykład bez kanału (powiadomienia przez DM):**
-```json
-{
-  "discord": {
-    "enabled": true,
-    "bot_token": "MTIzNDU2Nzg5MDEyMzQ1Njc4OTA.Xxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "guild_id": "123456789012345678",
-    "user_id": "987654321098765432",
-    "channel_id": ""
-  }
-}
-```
-
-**Uwaga:** Jeśli `channel_id` jest pusty, bot automatycznie wyśle powiadomienia przez DM (prywatną wiadomość).
-
-## Krok 10: Uruchomienie bota
-
-1. Uruchom aplikację M2Watcher
-2. Bot powinien automatycznie połączyć się z serwerem Discord
-3. W konsoli powinieneś zobaczyć: `Bot Discord zalogowany jako [Nazwa Bota]`
-4. Powiadomienia będą automatycznie wysyłane do kanału z `channel_id` lub przez DM
+Jeśli internet zniknie, powiadomienia **nie przepadają**. Karta „Discord” w oknie aplikacji pokaże „Brak połączenia • N w kolejce”, a wiadomości wyjdą same, gdy sieć wróci (także po restarcie aplikacji). Wiadomość wysłana z opóźnieniem ma w stopce dopisek, o ile minut się spóźniła; godzina wykrycia jest w polu „Wykryto”.
 
 ## Rozwiązywanie problemów
 
-### Bot nie łączy się z serwerem
-- Sprawdź czy token bota jest poprawny
-- Upewnij się, że bot został dodany na serwer (Krok 4)
-- Sprawdź czy `guild_id` jest poprawne
+| Komunikat | Co zrobić |
+|---|---|
+| `HTTP 404: nie znaleziono webhooka/kanału` | Webhook został usunięty albo adres jest ucięty. Skopiuj go ponownie. |
+| `HTTP 401: nieprawidłowy token bota` | Zresetuj token w Developer Portal i wklej nowy. |
+| `HTTP 403: bot nie ma uprawnień…` | Dodaj botowi uprawnienie *Send Messages* do kanału. Przy DM: bot musi być na wspólnym serwerze, a Ty musisz mieć włączone „Wiadomości prywatne od członków serwera”. |
+| `Brak połączenia z Discordem` | Sprawdź internet. Powiadomienia czekają w kolejce; „Ponów teraz” wymusza próbę od razu. |
 
-### Bot nie odpowiada na komendy
-- Upewnij się, że bot ma uprawnienia do czytania i wysyłania wiadomości
-- Sprawdź czy bot jest online na serwerze
-
-### Nie można utworzyć kanału
-- Upewnij się, że bot ma uprawnienie **"Manage Channels"**
-- Sprawdź czy bot ma odpowiednie uprawnienia w kategorii
-
-### Powiadomienia nie przychodzą
-- Sprawdź czy `user_id` w konfiguracji jest poprawne
-- Sprawdź czy `channel_id` jest poprawne (lub zostaw puste dla DM)
-- Sprawdź czy bot jest uruchomiony (powinien być widoczny jako online na serwerze)
-- Jeśli używasz DM, upewnij się, że bot może wysyłać Ci wiadomości (sprawdź ustawienia prywatności Discord)
-
-## Bezpieczeństwo
-
-⚠️ **WAŻNE**: Nigdy nie udostępniaj swojego tokenu bota publicznie!
-- Token bota daje pełny dostęp do bota
-- Jeśli token zostanie skradziony, natychmiast zresetuj go w Discord Developer Portal
+Jeśli dalej nie działa: **Otwórz folder logów** w aplikacji i dołącz `m2watcher.log` do zgłoszenia na GitHubie.

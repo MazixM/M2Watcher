@@ -35,13 +35,23 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.12'
     
     - name: Install dependencies
       working-directory: ./app
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements-build.txt
+    
+    - name: Run tests
+      working-directory: ./app
+      run: |
+        python -m unittest discover -s tests -v
+    
+    - name: Smoke test (imports on Windows)
+      working-directory: ./app
+      run: |
+        python -c "import main, gui.main_window, gui.settings, m2watcher, sounds; assert m2watcher.WIN32_AVAILABLE, 'pywin32'; assert sounds.IS_WINDOWS; print('OK')"
     
     - name: Build EXE
       working-directory: ./app
@@ -118,10 +128,9 @@ jobs:
           
           ### ⚙️ Instalacja
           
-          1. Pobierz plik ZIP
-          2. Rozpakuj
-          3. Uruchom M2Watcher.exe
-          4. Skonfiguruj zgodnie z [instrukcją](https://github.com/${{ github.repository }}/blob/main/app/README.md)
+          1. Pobierz plik ZIP i rozpakuj
+          2. Uruchom M2Watcher.exe
+          3. Przejdź kreator pierwszego uruchomienia ([instrukcja Discord](https://github.com/${{ github.repository }}/blob/main/app/DISCORD_SETUP.md))
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

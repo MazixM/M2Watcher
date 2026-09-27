@@ -1,17 +1,30 @@
 {
+  "config_version": 2,
+  "setup_completed": true,
+  "device_name": "PC w pokoju",
+  "process_names": ["metin2client.exe"],
   "check_interval": 2.0,
-  "network_check_samples": 5,
-  "network_threshold": 1000,
+  "logout_grace_seconds": 5.0,
   "debug": false,
-  "sound_enabled": true,
-  "sound_wait_for_input": true,
-  "show_status": true,
+  "start_minimized": false,
   "discord": {
+    "method": "webhook",
+    "webhook_url": "https://discord.com/api/webhooks/123456789012345678/WKLEJ_TUTAJ",
+    "bot_token": "",
+    "channel_id": "",
+    "user_id": "",
+    "mention_user": true,
+    "notify_events": {"logout": true, "closed": true, "reconnect": true}
+  },
+  "sounds": {
     "enabled": true,
-    "bot_token": "YOUR_BOT_TOKEN",
-    "guild_id": "YOUR_GUILD_ID",
-    "user_id": "YOUR_DISCORD_USER_ID",
-    "channel_id": "YOUR_CHANNEL_ID"
+    "volume": 80,
+    "repeat_until_ack": true,
+    "max_alarm_seconds": 300,
+    "events": {
+      "logout": {"sound": "builtin:alarm", "file": ""},
+      "closed": {"sound": "builtin:syrena", "file": ""},
+      "reconnect": {"sound": "builtin:dzwonek", "file": ""}
+    }
   }
 }
-
