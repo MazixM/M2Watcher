@@ -29,6 +29,20 @@ wykryć, ale wymagał folderu `_internal` obok exe i psuł się w praktyce). Szc
 (m.in. podpis cyfrowy): [issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7)
 oraz [SIGNING.md](../SIGNING.md).
 
+### Build eksperymentalny: Nuitka
+
+```bash
+cd app
+pip install -r requirements-nuitka.txt
+python build_nuitka.py    # → dist/M2Watcher.exe (kompilacja do C, jeden plik)
+```
+
+Nuitka kompiluje kod Pythona do C zamiast pakować bytecode. Binarka nie ma archiwum PYZ ani bootloadera
+PyInstallera, na którym uczą się modele antywirusowe, więc zwykle dostaje mniej fałszywych alarmów.
+Buduje ją osobny workflow `build-nuitka.yml` (na PR-ach, obok głównego builda) — porównujemy wynik na
+VirusTotal, zanim ewentualnie zastąpi PyInstallera. Wymaga kompilatora C (Windows: MSVC; Linux: gcc +
+`patchelf`).
+
 ## Wydania (release)
 
 CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie, buduje folder z exe

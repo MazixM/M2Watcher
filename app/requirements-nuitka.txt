@@ -1,0 +1,4 @@
+# Zależności buildu Nuitką (eksperymentalny build obok PyInstallera).
+# Osobno od requirements-build.txt, żeby nie spowalniać głównego builda PyInstallera.
+-r requirements-build.txt
+nuitka>=2.4
