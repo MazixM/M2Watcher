@@ -77,22 +77,42 @@ def main(argv) -> int:
                       headers={"content-type": f"multipart/form-data; boundary={boundary}"})
             analysis_id = up["data"]["id"]
             deadline = time.time() + 300
+            completed = False
+            an = None
             while time.time() < deadline:
                 time.sleep(20)
                 an = _req(f"{API}/analyses/{analysis_id}", key)
                 if an["data"]["attributes"]["status"] == "completed":
+                    completed = True
                     break
-            report = _req(f"{API}/files/{sha256}", key)
 
-        stats = report["data"]["attributes"]["last_analysis_stats"]
-        mal = stats.get("malicious", 0)
-        total = sum(v for k, v in stats.items() if k in ("malicious", "undetected", "suspicious", "harmless"))
-        result = f"{mal}/{total} wykryć"
-        if mal:
-            results = report["data"]["attributes"].get("last_analysis_results", {})
-            flagged = sorted(k for k, v in results.items() if v.get("category") in ("malicious", "suspicious"))
-            result += " (" + ", ".join(flagged[:8]) + ")"
-        _emit(result, gui_url)
+            if not completed or an is None:
+                _emit("analiza w toku (VT nie zdążył w 5 min) — sprawdź pod linkiem", gui_url)
+                return 0
+
+            stats = an["data"]["attributes"]["stats"]
+            mal = stats.get("malicious", 0)
+            total = sum(v for k, v in stats.items() if k in ("malicious", "undetected", "suspicious", "harmless"))
+            result = f"{mal}/{total} wykryć"
+            if mal:
+                try:
+                    report = _req(f"{API}/files/{sha256}", key)
+                    results = report["data"]["attributes"].get("last_analysis_results", {})
+                    flagged = sorted(k for k, v in results.items() if v.get("category") in ("malicious", "suspicious"))
+                    result += " (" + ", ".join(flagged[:8]) + ")"
+                except Exception:
+                    pass
+            _emit(result, gui_url)
+        else:
+            stats = report["data"]["attributes"]["last_analysis_stats"]
+            mal = stats.get("malicious", 0)
+            total = sum(v for k, v in stats.items() if k in ("malicious", "undetected", "suspicious", "harmless"))
+            result = f"{mal}/{total} wykryć"
+            if mal:
+                results = report["data"]["attributes"].get("last_analysis_results", {})
+                flagged = sorted(k for k, v in results.items() if v.get("category") in ("malicious", "suspicious"))
+                result += " (" + ", ".join(flagged[:8]) + ")"
+            _emit(result, gui_url)
     except Exception as e:  # noqa: BLE001 — skan nie może wywalić builda
         _emit(f"błąd skanu ({e.__class__.__name__})", gui_url)
     return 0
