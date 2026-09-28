@@ -136,6 +136,7 @@ jobs:
       working-directory: ./app
       shell: bash
       env:
+        PYTHONIOENCODING: utf-8
         VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
         # Sprawdza, ile silników oznacza świeży exe. Nie blokuje builda — sam pomiar.
@@ -243,12 +244,14 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: v.${{ needs.build.outputs.version }}
         ZIP: ${{ steps.zip.outputs.name }}
+        VT_RESULT: ${{ needs.build.outputs.vt_result }}
+        VT_URL: ${{ needs.build.outputs.vt_url }}
       run: |
         if gh release view "$TAG" >/dev/null 2>&1; then
           echo "::error::Release $TAG już istnieje — podbij wersję w app/version.py"
           exit 1
         fi
-        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$ZIP" > notes.md
+        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$ZIP" "$VT_RESULT" "$VT_URL" > notes.md
         cat notes.md
         gh release create "$TAG" "$ZIP" \
           --target "$GITHUB_SHA" \

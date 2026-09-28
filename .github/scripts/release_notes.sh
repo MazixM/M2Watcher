@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Generuje opis release'u w formacie dotychczasowych wydań (v.1.0.x).
-# Użycie: release_notes.sh <tag> <sha> <owner/repo> <plik_zip>
+# Użycie: release_notes.sh <tag> <sha> <owner/repo> <plik_zip> [vt_result] [vt_url]
 set -euo pipefail
 
 TAG="$1"; SHA="$2"; REPO="$3"; ZIP="$4"
+VT_RESULT="${5:-}"
+VT_URL="${6:-}"
 URL="https://github.com/${REPO}"
 
 # Poprzedni tag w formacie v.X.Y.Z (najwyższy, różny od bieżącego)
@@ -17,6 +19,18 @@ echo "### 📦 Pobierz"
 echo
 echo "Pobierz plik **${ZIP}** z sekcji Assets poniżej."
 echo
+
+if [ -n "$VT_RESULT" ]; then
+  echo "### 🛡️ VirusTotal"
+  echo
+  if [ -n "$VT_URL" ]; then
+    echo "[${VT_RESULT}](${VT_URL})"
+  else
+    echo "${VT_RESULT}"
+  fi
+  echo
+fi
+
 echo "### 📝 Zmiany"
 echo
 if [ -n "$PREV" ]; then
