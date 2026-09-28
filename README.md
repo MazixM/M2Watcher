@@ -13,7 +13,7 @@ Pilnuje Twoich klientów Metin2 i daje znać, gdy któryś się **wyloguje** alb
 
 Gotowe. Zostaw aplikację uruchomioną (możesz ją zminimalizować). Wszystko zmienisz później w **⚙ Ustawienia**.
 
-> Windows SmartScreen może ostrzec przed nieznanym programem. Kliknij „Więcej informacji” → „Uruchom mimo to”.
+> Windows SmartScreen może ostrzec przed nieznanym programem. Kliknij „Więcej informacji” → „Uruchom mimo to”. Jeśli antywirus zgłasza plik jako zagrożenie — patrz [Antywirus zgłasza M2Watcher](#antywirus-zgłasza-m2watcher).
 
 ## Co potrafi
 
@@ -49,6 +49,25 @@ Wszystko leży w `%USERPROFILE%\.m2watcher\`:
 | `outbox.json` | powiadomienia czekające na wysłanie (np. gdy nie było internetu) |
 
 Szczegóły techniczne, uruchamianie z kodu źródłowego i rozwiązywanie problemów: [app/README.md](app/README.md).
+
+## Antywirus zgłasza M2Watcher
+
+Część antywirusów potrafi zgłosić `M2Watcher.exe` jako zagrożenie — to **fałszywy alarm**. Nie chodzi o to, że plik jest niebezpieczny, tylko o to, jak jest zbudowany: to program w Pythonie spakowany PyInstallerem, a takie pliki modele heurystyczne (nazwy typu `!ml`, „Static AI”, „confidence 70%”) często oznaczają na wszelki wypadek. M2Watcher działa całkowicie pasywnie: nie czyta pamięci gry, nie wstrzykuje kodu, nie modyfikuje plików gry.
+
+Co robimy, żeby tego uniknąć (bez płatnego certyfikatu):
+
+- budujemy bez kompresji UPX (kojarzonej z malware);
+- bootloader PyInstallera jest kompilowany ze źródeł w CI, więc nie ma odcisku wspólnego z próbkami, na których uczą się modele AV;
+- exe ma pełne metadane (autor, opis, wersja) i ikonę;
+- każdy build jest publicznie budowany na GitHub Actions z tego kodu (możesz sprawdzić i zbudować sam);
+- pracujemy nad darmowym podpisem cyfrowym dla projektów open source ([SignPath](https://about.signpath.io/product/open-source)).
+
+Jeśli mimo to Twój antywirus blokuje plik:
+
+1. Sprawdź aktualny wynik na [VirusTotal](https://www.virustotal.com/) — wklej plik albo jego skrót SHA-256. Kilka wykryć z silników ML to typowy fałszywy alarm.
+2. Dodaj `M2Watcher.exe` do wyjątków antywirusa.
+3. Możesz zgłosić fałszywy alarm producentowi antywirusa (np. [Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission) → „Incorrectly detected as malware”) — to pomaga wszystkim użytkownikom.
+4. Nie ufasz gotowemu plikowi? [Zbuduj exe samodzielnie ze źródeł](app/README.md#budowanie-exe) — kod jest w całości otwarty.
 
 ## Wymagania
 

@@ -39,6 +39,8 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       display_version: ${{ steps.version.outputs.display }}
       artifact_url: ${{ steps.upload.outputs.artifact-url }}
+      vt_result: ${{ steps.vt.outputs.result }}
+      vt_url: ${{ steps.vt.outputs.url }}
 
     steps:
     - name: Checkout code
@@ -72,6 +74,21 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-build.txt
+
+    - name: Bootloader PyInstallera ze źródeł (mniej fałszywych alarmów)
+      shell: bash
+      run: |
+        # Gotowy bootloader z wheela ma bajty wspólne z tysiącami próbek malware, na których uczą
+        # się modele AV (Wacatac!ml, „Static AI”). Skompilowany tu ze źródeł ma inny odcisk.
+        # Windows-latest ma MSVC. Gdyby build się nie udał — wracamy do bootloadera z wheela.
+        ver=$(python -c "import PyInstaller,sys; sys.stdout.write(PyInstaller.__version__)")
+        echo "PyInstaller $ver — buduję bootloader ze źródeł"
+        if pip install --no-binary pyinstaller --force-reinstall --no-deps "pyinstaller==$ver"; then
+          echo "✓ bootloader zbudowany ze źródeł"
+        else
+          echo "::warning::Nie udało się zbudować bootloadera ze źródeł — używam gotowego z wheela"
+          pip install --force-reinstall --no-deps "pyinstaller==$ver"
+        fi
 
     - name: Run tests
       working-directory: ./app
@@ -109,6 +126,22 @@ jobs:
         Get-Content "$env:USERPROFILE\.m2watcher\logs\m2watcher.log" -Tail 20
         if ($p.ExitCode -ne 0) { Write-Error "Self-test exe nie przeszedł (kod $($p.ExitCode))"; exit 1 }
 
+    - name: Skan VirusTotal (informacyjnie)
+      id: vt
+      working-directory: ./app
+      shell: bash
+      env:
+        VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+      run: |
+        # Sprawdza, ile silników oznacza świeży exe. Nie blokuje builda — sam pomiar.
+        # Wymaga sekretu VIRUSTOTAL_API_KEY (darmowe konto VirusTotal). Bez niego krok się pomija.
+        if [ -z "$VT_API_KEY" ]; then
+          echo "result=brak klucza VT (dodaj sekret VIRUSTOTAL_API_KEY)" >> "$GITHUB_OUTPUT"
+          echo "Pominięto skan VirusTotal — brak sekretu VIRUSTOTAL_API_KEY." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        python ../.github/scripts/vt_scan.py "dist/M2Watcher.exe" || true
+
     - name: Upload EXE artifact
       id: upload
       uses: actions/upload-artifact@v4
@@ -139,18 +172,25 @@ jobs:
       env:
         ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
         VERSION: ${{ needs.build.outputs.display_version }}
+        VT_RESULT: ${{ needs.build.outputs.vt_result }}
+        VT_URL: ${{ needs.build.outputs.vt_url }}
       with:
         script: |
           const marker = '<!-- m2watcher-pr-exe -->';
           const sha = context.payload.pull_request.head.sha;
           const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          let vtLine = '';
+          if (process.env.VT_RESULT) {
+            const link = process.env.VT_URL ? `[${process.env.VT_RESULT}](${process.env.VT_URL})` : process.env.VT_RESULT;
+            vtLine = `\nVirusTotal: ${link}\n`;
+          }
           const body = [
             marker,
             '### 📦 M2Watcher.exe do przetestowania',
             '',
             `**[Pobierz M2Watcher.exe](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
-            '',
-            `Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](${runUrl})`,
+            vtLine,
+            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](' + runUrl + ')',
             '',
             '_Komentarz aktualizuje się po każdym pushu do tego PR-a._',
           ].join('\n');
