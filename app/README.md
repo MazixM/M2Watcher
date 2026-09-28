@@ -19,14 +19,15 @@ Wymagany Python 3.10+ z `tkinter` (instalator z python.org ma go domyślnie).
 ```bash
 cd app
 pip install -r requirements-build.txt
-python build_exe.py       # → dist/M2Watcher/ (folder: M2Watcher.exe + _internal, bez okna konsoli)
+python build_exe.py       # → dist/M2Watcher.exe (jeden plik, bez okna konsoli)
 ```
 
-Build jest w trybie katalogowym (`--onedir`), bez UPX, z metadanymi wersji (z `version.py`) i ikoną
-(`assets/m2watcher.ico`) — świadomie, żeby ograniczyć fałszywe alarmy antywirusów (exe z `--onefile`
-rozpakowuje się do `%TEMP%` i ma doklejony overlay, co przypomina droppery). Dystrybucja to zip z całym
-folderem `M2Watcher`; `M2Watcher.exe` wymaga folderu `_internal` obok siebie. Szczegóły i dalsze kroki
-(m.in. podpis cyfrowy): [issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7).
+Build jest w trybie jednego pliku (`--onefile`), bez UPX, z metadanymi wersji (z `version.py`) i ikoną
+(`assets/m2watcher.ico`). W CI bootloader PyInstallera jest dodatkowo kompilowany ze źródeł — świadomie,
+żeby ograniczyć fałszywe alarmy antywirusów bez utraty wygody jednego pliku (tryb `--onedir` dawał mniej
+wykryć, ale wymagał folderu `_internal` obok exe i psuł się w praktyce). Szczegóły i dalsze kroki
+(m.in. podpis cyfrowy): [issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7)
+oraz [SIGNING.md](../SIGNING.md).
 
 ## Wydania (release)
 
@@ -65,7 +66,7 @@ Testy nie wymagają Windowsa ani internetu: kolejka Discorda, ponawianie, migrac
 | `sounds.py` | dźwięki WAV: wbudowane, własne pliki, głośność, pętla alarmu |
 | `config.py` | `config.json`: domyślne wartości, migracja ze starej wersji, zapis atomowy |
 | `app_logging.py` | log do pliku z rotacją + przechwytywanie nieobsłużonych wyjątków |
-| `build_exe.py` | build PyInstaller (`--onedir`): metadane wersji, ikona, bez UPX |
+| `build_exe.py` | build PyInstaller (`--onefile`): metadane wersji, ikona, bez UPX |
 | `assets/m2watcher.ico` | ikona aplikacji i exe |
 | `gui/` | okno główne, kreator pierwszego uruchomienia, ustawienia |
 

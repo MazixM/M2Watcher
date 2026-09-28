@@ -1,17 +1,15 @@
 """
-Buduje M2Watcher (PyInstaller) w trybie katalogowym (``--onedir``), bez okna konsoli.
+Buduje M2Watcher.exe (PyInstaller, jeden plik, bez okna konsoli).
 
     pip install -r requirements-build.txt
     python build_exe.py
 
-Dlaczego ``--onedir``, a nie jeden plik: exe z ``--onefile`` przy starcie rozpakowuje się do
-``%TEMP%`` i ma doklejone archiwum na końcu pliku (overlay). To wzorzec dropperów, który
-podbija fałszywe alarmy antywirusów. Tryb katalogowy tego nie robi. Do dystrybucji cały
-katalog ``dist/M2Watcher`` pakujemy w zip (robi to CI); użytkownik rozpakowuje i uruchamia
-``M2Watcher.exe`` w środku.
-
-Plik dostaje też metadane wersji (autor, opis, wersja) i ikonę — bez nich exe jest anonimowy,
-co również zwiększa nieufność heurystyk. Podpis cyfrowy nakłada dopiero CI (osobny krok).
+Tryb ``--onefile`` (jeden plik) wybrany świadomie: użytkownik pobiera i uruchamia jeden exe,
+nic nie może się „rozjechać”. Tryb katalogowy (``--onedir``) dawał mniej fałszywych alarmów,
+ale wymagał folderu ``_internal`` obok exe — i psuł się, gdy przeniesiono sam plik albo gdy
+antywirus usunął z folderu pojedynczą bibliotekę. Działające uruchomienie jest ważniejsze niż
+kilka wykryć mniej, więc walkę z fałszywymi alarmami prowadzimy inaczej: bez UPX, z metadanymi
+i ikoną, z bootloaderem budowanym ze źródeł (CI) i docelowo z podpisem cyfrowym.
 """
 import shutil
 import subprocess
@@ -90,7 +88,7 @@ def main() -> int:
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--noconfirm", "--clean", "--onedir", "--windowed",
+        "--noconfirm", "--clean", "--onefile", "--windowed",
         "--name", "M2Watcher",
         # UPX podbija fałszywe alarmy (kompresja kojarzona z malware) — wyłączamy jawnie
         "--noupx",
@@ -110,17 +108,14 @@ def main() -> int:
         print("✗ PyInstaller zakończył się błędem")
         return result.returncode
 
-    exe_name = "M2Watcher.exe" if sys.platform == "win32" else "M2Watcher"
-    exe = HERE / "dist" / "M2Watcher" / exe_name
+    exe = HERE / "dist" / ("M2Watcher.exe" if sys.platform == "win32" else "M2Watcher")
     if not exe.exists():
         print(f"✗ Nie znaleziono {exe}")
         return 1
     shutil.rmtree(HERE / "build", ignore_errors=True)
     for spec in HERE.glob("*.spec"):
         spec.unlink()
-    folder = HERE / "dist" / "M2Watcher"
-    total = sum(f.stat().st_size for f in folder.rglob("*") if f.is_file())
-    print(f"✓ Gotowe: {folder} ({total / 1024 / 1024:.1f} MB, exe: {exe.name})")
+    print(f"✓ Gotowe: {exe} ({exe.stat().st_size / 1024 / 1024:.1f} MB)")
     return 0
 
 

@@ -4,8 +4,8 @@ Pilnuje Twoich klientów Metin2 i daje znać, gdy któryś się **wyloguje** alb
 
 ## Szybki start (3 kroki)
 
-1. Pobierz najnowszy `M2Watcher-*.zip` z [Releases](https://github.com/MazixM/M2Watcher/releases) i rozpakuj **cały folder** (nie uruchamiaj z wnętrza zipa).
-2. Wejdź do rozpakowanego folderu `M2Watcher` i uruchom `M2Watcher.exe`. Nie trzeba instalować Pythona ani niczego innego. Pliki obok exe (folder `_internal`) muszą zostać razem z nim.
+1. Pobierz najnowszy `M2Watcher-*.zip` z [Releases](https://github.com/MazixM/M2Watcher/releases) i rozpakuj.
+2. Uruchom `M2Watcher.exe`. Nie trzeba instalować Pythona ani niczego innego.
 3. Przejdź kreator (ok. 2 minuty):
    - wpisz **nazwę urządzenia**, np. „Laptop” albo „PC w pokoju”. Pojawi się w każdym powiadomieniu, więc przy kilku komputerach od razu wiesz, skąd przyszedł alert;
    - wklej **adres webhooka Discord** ([jak go zdobyć — 1 minuta](app/DISCORD_SETUP.md)) i kliknij „Wyślij wiadomość testową”;
@@ -56,15 +56,16 @@ Część antywirusów potrafi zgłosić `M2Watcher.exe` jako zagrożenie — to 
 
 Co robimy, żeby tego uniknąć (bez płatnego certyfikatu):
 
-- budujemy exe w trybie katalogowym (`--onedir`), bez kompresji UPX i bez doklejanego archiwum — to najczęstsze przyczyny fałszywych alarmów;
+- budujemy bez kompresji UPX (kojarzonej z malware);
+- bootloader PyInstallera jest kompilowany ze źródeł w CI, więc nie ma odcisku wspólnego z próbkami, na których uczą się modele AV;
 - exe ma pełne metadane (autor, opis, wersja) i ikonę;
 - każdy build jest publicznie budowany na GitHub Actions z tego kodu (możesz sprawdzić i zbudować sam);
-- pracujemy nad darmowym podpisem cyfrowym dla projektów open source.
+- pracujemy nad darmowym podpisem cyfrowym dla projektów open source ([SignPath](https://about.signpath.io/product/open-source)).
 
 Jeśli mimo to Twój antywirus blokuje plik:
 
 1. Sprawdź aktualny wynik na [VirusTotal](https://www.virustotal.com/) — wklej plik albo jego skrót SHA-256. Kilka wykryć z silników ML to typowy fałszywy alarm.
-2. Dodaj folder `M2Watcher` do wyjątków antywirusa.
+2. Dodaj `M2Watcher.exe` do wyjątków antywirusa.
 3. Możesz zgłosić fałszywy alarm producentowi antywirusa (np. [Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission) → „Incorrectly detected as malware”) — to pomaga wszystkim użytkownikom.
 4. Nie ufasz gotowemu plikowi? [Zbuduj exe samodzielnie ze źródeł](app/README.md#budowanie-exe) — kod jest w całości otwarty.
 

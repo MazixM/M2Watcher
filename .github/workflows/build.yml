@@ -75,6 +75,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-build.txt
 
+    - name: Bootloader PyInstallera ze źródeł (mniej fałszywych alarmów)
+      shell: bash
+      run: |
+        # Gotowy bootloader z wheela ma bajty wspólne z tysiącami próbek malware, na których uczą
+        # się modele AV (Wacatac!ml, „Static AI”). Skompilowany tu ze źródeł ma inny odcisk.
+        # Windows-latest ma MSVC. Gdyby build się nie udał — wracamy do bootloadera z wheela.
+        ver=$(python -c "import PyInstaller,sys; sys.stdout.write(PyInstaller.__version__)")
+        echo "PyInstaller $ver — buduję bootloader ze źródeł"
+        if pip install --no-binary pyinstaller --force-reinstall --no-deps "pyinstaller==$ver"; then
+          echo "✓ bootloader zbudowany ze źródeł"
+        else
+          echo "::warning::Nie udało się zbudować bootloadera ze źródeł — używam gotowego z wheela"
+          pip install --force-reinstall --no-deps "pyinstaller==$ver"
+        fi
+
     - name: Run tests
       working-directory: ./app
       run: |
@@ -95,20 +110,19 @@ jobs:
     - name: Verify EXE exists
       working-directory: ./app
       run: |
-        # Tryb --onedir: exe leży w folderze dist/M2Watcher obok folderu _internal
-        if (-not (Test-Path "dist/M2Watcher/M2Watcher.exe")) {
+        if (-not (Test-Path "dist/M2Watcher.exe")) {
           Write-Error "M2Watcher.exe nie został utworzony!"
           exit 1
         }
-        $size = (Get-ChildItem "dist/M2Watcher" -Recurse | Measure-Object Length -Sum).Sum / 1MB
-        Write-Output "✓ Folder M2Watcher utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
+        $size = (Get-Item "dist/M2Watcher.exe").Length / 1MB
+        Write-Output "✓ M2Watcher.exe utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
 
     - name: Self-test EXE (moduły spakowane w exe)
       working-directory: ./app
       shell: pwsh
       run: |
         # Test na gotowym exe, nie na Pythonie — łapie moduły pominięte przez PyInstallera
-        $p = Start-Process -FilePath "dist/M2Watcher/M2Watcher.exe" -ArgumentList "--self-test" -Wait -PassThru
+        $p = Start-Process -FilePath "dist/M2Watcher.exe" -ArgumentList "--self-test" -Wait -PassThru
         Get-Content "$env:USERPROFILE\.m2watcher\logs\m2watcher.log" -Tail 20
         if ($p.ExitCode -ne 0) { Write-Error "Self-test exe nie przeszedł (kod $($p.ExitCode))"; exit 1 }
 
@@ -126,20 +140,20 @@ jobs:
           echo "Pominięto skan VirusTotal — brak sekretu VIRUSTOTAL_API_KEY." >> "$GITHUB_STEP_SUMMARY"
           exit 0
         fi
-        python ../.github/scripts/vt_scan.py "dist/M2Watcher/M2Watcher.exe" || true
+        python ../.github/scripts/vt_scan.py "dist/M2Watcher.exe" || true
 
-    - name: Upload artifact (folder M2Watcher)
+    - name: Upload EXE artifact
       id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: M2Watcher
-        path: app/dist/M2Watcher
+        name: M2Watcher.exe
+        path: app/dist/M2Watcher.exe
         retention-days: 30
 
     - name: Link do pobrania w podsumowaniu
       shell: bash
       run: |
-        echo "### 📦 [Pobierz M2Watcher (${{ steps.version.outputs.display }})](${{ steps.upload.outputs.artifact-url }})" >> "$GITHUB_STEP_SUMMARY"
+        echo "### 📦 [Pobierz M2Watcher.exe (${{ steps.version.outputs.display }})](${{ steps.upload.outputs.artifact-url }})" >> "$GITHUB_STEP_SUMMARY"
 
   pr-comment:
     # Komentarz w PR z bezpośrednim linkiem do exe — aktualizowany przy każdym pushu.
@@ -172,11 +186,11 @@ jobs:
           }
           const body = [
             marker,
-            '### 📦 M2Watcher do przetestowania',
+            '### 📦 M2Watcher.exe do przetestowania',
             '',
-            `**[Pobierz M2Watcher](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
+            `**[Pobierz M2Watcher.exe](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
             vtLine,
-            'To zip z folderem `M2Watcher` (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. Rozpakuj i uruchom `M2Watcher.exe` ze środka. [Szczegóły builda](' + runUrl + ')',
+            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](' + runUrl + ')',
             '',
             '_Komentarz aktualizuje się po każdym pushu do tego PR-a._',
           ].join('\n');
@@ -205,18 +219,17 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Download folder M2Watcher
+    - name: Download EXE
       uses: actions/download-artifact@v4
       with:
-        name: M2Watcher
-        path: dist/M2Watcher
+        name: M2Watcher.exe
+        path: dist
 
     - name: Create ZIP
       id: zip
       run: |
-        # Zip z folderem M2Watcher w środku (exe + _internal) — tryb --onedir
         zip_name="M2Watcher-${GITHUB_SHA}.zip"
-        (cd dist && zip -r -q "../${zip_name}" M2Watcher)
+        (cd dist && zip -q "../${zip_name}" M2Watcher.exe)
         echo "name=${zip_name}" >> "$GITHUB_OUTPUT"
         ls -la "${zip_name}"
 
