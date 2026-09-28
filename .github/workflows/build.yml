@@ -57,7 +57,8 @@ jobs:
       run: |
         version=$(python .github/scripts/next_version.py)
         if [ "${{ github.event_name }}" = "pull_request" ]; then
-          display="${version}-dev+${GITHUB_SHA::7}"
+          head_sha="${{ github.event.pull_request.head.sha }}"  # commit z PR-a, nie tymczasowy merge commit
+          display="${version}-dev+${head_sha::7}"
         else
           display="${version}"
         fi
