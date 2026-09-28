@@ -19,14 +19,22 @@ Wymagany Python 3.10+ z `tkinter` (instalator z python.org ma go domyślnie).
 ```bash
 cd app
 pip install -r requirements-build.txt
-python build_exe.py       # → dist/M2Watcher.exe (jeden plik, bez okna konsoli)
+python build_exe.py       # → dist/M2Watcher/ (folder: M2Watcher.exe + _internal, bez okna konsoli)
 ```
+
+Build jest w trybie katalogowym (`--onedir`), bez UPX, z metadanymi wersji (z `version.py`) i ikoną
+(`assets/m2watcher.ico`) — świadomie, żeby ograniczyć fałszywe alarmy antywirusów (exe z `--onefile`
+rozpakowuje się do `%TEMP%` i ma doklejony overlay, co przypomina droppery). Dystrybucja to zip z całym
+folderem `M2Watcher`; `M2Watcher.exe` wymaga folderu `_internal` obok siebie. Szczegóły i dalsze kroki
+(m.in. podpis cyfrowy): [issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7).
 
 ## Wydania (release)
 
-CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie i buduje exe (artefakt do pobrania z zakładki Actions).
+CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie, buduje folder z exe
+(artefakt do pobrania z zakładki Actions) i — jeśli jest sekret `VIRUSTOTAL_API_KEY` — skanuje exe na
+VirusTotal, dopisując wynik do komentarza w PR-ze.
 
-**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z plikiem `M2Watcher-<commit>.zip` i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
+**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z plikiem `M2Watcher-<commit>.zip` (zip z folderem `M2Watcher`) i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
 
 Numer wersji:
 - bazą jest `__version__` w `app/version.py`,
@@ -57,6 +65,8 @@ Testy nie wymagają Windowsa ani internetu: kolejka Discorda, ponawianie, migrac
 | `sounds.py` | dźwięki WAV: wbudowane, własne pliki, głośność, pętla alarmu |
 | `config.py` | `config.json`: domyślne wartości, migracja ze starej wersji, zapis atomowy |
 | `app_logging.py` | log do pliku z rotacją + przechwytywanie nieobsłużonych wyjątków |
+| `build_exe.py` | build PyInstaller (`--onedir`): metadane wersji, ikona, bez UPX |
+| `assets/m2watcher.ico` | ikona aplikacji i exe |
 | `gui/` | okno główne, kreator pierwszego uruchomienia, ustawienia |
 
 ## Konfiguracja (`%USERPROFILE%\.m2watcher\config.json`)
