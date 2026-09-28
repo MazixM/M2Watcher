@@ -86,4 +86,4 @@ Jeśli aplikacja jest dla Ciebie przydatna, możesz wesprzeć projekt dobrowoln�
 
 ## Licencja
 
-Open Source
+[MIT](LICENSE) — możesz używać, zmieniać i rozpowszechniać, zachowując informację o autorze.
