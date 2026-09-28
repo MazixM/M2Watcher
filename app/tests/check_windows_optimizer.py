@@ -25,6 +25,7 @@ def cpu_percent(proc: psutil.Process, seconds: float = 3.0) -> float:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]  # konsola CI to cp1252
     backend = opt.default_backend()
     assert backend.available, "brak backendu Windows"
     topo = opt.CpuTopology.detect()
