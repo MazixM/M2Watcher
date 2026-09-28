@@ -41,6 +41,7 @@ def _emit(result: str, url: str = "") -> None:
 
 
 def main(argv) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]  # konsola CI to cp1252
     key = os.environ.get("VT_API_KEY", "")
     if not key or len(argv) < 2:
         _emit("pominięto (brak klucza lub pliku)")

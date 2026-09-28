@@ -136,6 +136,7 @@ jobs:
       working-directory: ./app
       shell: bash
       env:
+        PYTHONIOENCODING: utf-8
         VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
       run: |
         # Sprawdza, ile silników oznacza świeży exe. Nie blokuje builda — sam pomiar.
