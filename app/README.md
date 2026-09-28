@@ -54,6 +54,8 @@ python -m unittest discover -s tests -v
 
 Testy nie wymagają Windowsa ani internetu: kolejka Discorda, ponawianie, migracja konfiguracji, wykrywanie wylogowania, dźwięki.
 
+Moduł optymalizacji ma testy logiki na atrapie procesów (`tests/test_optimizer.py`), a CI na Windowsie dodatkowo uruchamia `tests/check_windows_optimizer.py`: prawdziwe wstrzymywanie procesu, pomiar zużycia CPU, affinity, priorytet i ich przywrócenie.
+
 ## Struktura
 
 | Plik | Odpowiedzialność |
@@ -64,11 +66,12 @@ Testy nie wymagają Windowsa ani internetu: kolejka Discorda, ponawianie, migrac
 | `discord_client.py` | wysyłka REST (webhook/bot), trwała kolejka `outbox.json`, ponawianie |
 | `notifications.py` | treść powiadomień (nazwa urządzenia, kolory, pola) |
 | `sounds.py` | dźwięki WAV: wbudowane, własne pliki, głośność, pętla alarmu |
+| `optimizer.py` | opcjonalna optymalizacja: limit FPS (wstrzymywanie/wznawianie), rdzenie CPU, priorytet w tle — [OPTYMALIZACJA.md](OPTYMALIZACJA.md) |
 | `config.py` | `config.json`: domyślne wartości, migracja ze starej wersji, zapis atomowy |
 | `app_logging.py` | log do pliku z rotacją + przechwytywanie nieobsłużonych wyjątków |
 | `build_exe.py` | build PyInstaller (`--onefile`): metadane wersji, ikona, bez UPX |
 | `assets/m2watcher.ico` | ikona aplikacji i exe |
-| `gui/` | okno główne, kreator pierwszego uruchomienia, ustawienia |
+| `gui/` | okno główne (zakładki Monitor i Optymalizacja), kreator pierwszego uruchomienia, ustawienia |
 
 ## Konfiguracja (`%USERPROFILE%\.m2watcher\config.json`)
 
@@ -92,6 +95,14 @@ Zwykle edytujesz ją w oknie **Ustawienia**. Pełny przykład: [config.example.j
 | `sounds.max_alarm_seconds` | `300` | automatyczne wyciszenie (0 = nigdy) |
 | `sounds.events.<zdarzenie>.sound` | | `builtin:alarm`, `builtin:syrena`, `builtin:dzwonek`, `builtin:ping`, `custom` lub `none` |
 | `sounds.events.<zdarzenie>.file` | | ścieżka do pliku `.wav` dla `custom` |
+| `optimization.enabled` | `false` | moduł optymalizacji wielu klientów |
+| `optimization.default.fps_limit` | `0` | limit FPS dla wszystkich klientów (0 = bez limitu, 5–59) |
+| `optimization.default.fps_background_only` | `true` | limit tylko dla okien w tle |
+| `optimization.default.cores_mode` | `none` | `none`, `list` (tylko wybrane rdzenie) albo `spread` (każdy klient na innym rdzeniu) |
+| `optimization.default.cores` | `[]` | pula rdzeni logicznych (pusta = wszystkie) |
+| `optimization.default.background_priority` | `normal` | `normal`, `below_normal` albo `idle` dla klientów w tle |
+
+Własne ustawienia wybranych klientów ustawia się w oknie (zakładka Optymalizacja) i nie są zapisywane — obowiązują do zamknięcia klienta.
 
 Konfiguracja ze starszej wersji (`discord.enabled`, `sound_enabled`, `sound_wait_for_input`…) jest przenoszona automatycznie. Uszkodzony plik jest odkładany jako `config.broken.json`, a aplikacja startuje z ustawieniami domyślnymi.
 

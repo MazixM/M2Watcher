@@ -17,6 +17,7 @@ from controller import AppController
 from discord_client import (STATE_CONFIG_ERROR, STATE_DISABLED, STATE_OFFLINE, STATE_OK, STATE_SENDING,
                             SenderStatus)
 from gui import theme
+from gui.optimization import OptimizationTab
 from gui.settings import SettingsWindow, SetupWizard
 from m2watcher import WatchEvent
 
@@ -35,7 +36,7 @@ class MainWindow:
         self._icon = theme.make_icon(root)
         root.iconphoto(True, self._icon)
         root.title("M2Watcher")
-        root.geometry("920x680")
+        root.geometry("940x720")
         root.minsize(760, 520)
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.report_callback_exception = self._tk_error
@@ -85,9 +86,20 @@ class MainWindow:
         ttk.Button(footer, text="Otwórz folder logów", command=self.open_logs).pack(side="left", padx=8)
         ttk.Label(footer, text=f"wersja {self.version}", style="Hint.TLabel").pack(side="right")
 
+        # Zakładki: monitor (klienci + zdarzenia) i opcjonalna optymalizacja
+        self.tabs = ttk.Notebook(root)
+        self.tabs.pack(fill="both", expand=True, padx=20, pady=(4, 0))
+        body = ttk.Frame(self.tabs, padding=(0, 10, 0, 0))
+        self.tabs.add(body, text="Monitor")
+        self.optimization = OptimizationTab(
+            self.tabs, self.c.optimizer,
+            get_settings=lambda: self.c.config.get("optimization", {}),
+            save_settings=self._save_optimization,
+            get_clients=self.c.watcher.snapshot,
+        )
+        self.tabs.add(self.optimization, text="Optymalizacja")
+
         # Lista klientów
-        body = ttk.Frame(root, padding=(20, 4, 20, 0))
-        body.pack(fill="both", expand=True)
         ttk.Label(body, text="Klienci", style="H2.TLabel").pack(anchor="w", pady=(0, 6))
         cols = ("status", "title", "pid", "conn", "since")
         table_frame = ttk.Frame(body, style="Card.TFrame", padding=1)
@@ -157,6 +169,7 @@ class MainWindow:
         try:
             self._refresh_clients()
             self._refresh_sound()
+            self.optimization.refresh()
         finally:
             self.root.after(1000, self._tick)
 
@@ -274,6 +287,15 @@ class MainWindow:
         self._refresh_header()
         self._update_discord(self.c.discord_status())
         self.add_event("✔  Zapisano ustawienia")
+
+    def _save_optimization(self, data) -> None:
+        try:
+            self.c.save_optimization(data)
+        except Exception as e:
+            log.exception("Nie udało się zapisać ustawień optymalizacji")
+            messagebox.showerror("Błąd", f"Nie udało się zapisać ustawień:\n{e}", parent=self.root)
+            return
+        self.add_event("✔  Optymalizacja: " + ("włączona" if data.get("enabled") else "wyłączona"))
 
     def send_test(self) -> None:
         if self.c.config.get("discord.method", "none") == "none":
