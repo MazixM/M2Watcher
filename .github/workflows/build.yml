@@ -98,7 +98,12 @@ jobs:
     - name: Smoke test (imports on Windows)
       working-directory: ./app
       run: |
-        python -c "import main, gui.main_window, gui.settings, m2watcher, sounds; assert m2watcher.WIN32_AVAILABLE, 'pywin32'; assert sounds.IS_WINDOWS; print('OK')"
+        python -c "import main, gui.main_window, gui.settings, gui.optimization, m2watcher, sounds, optimizer; assert m2watcher.WIN32_AVAILABLE, 'pywin32'; assert sounds.IS_WINDOWS; print('OK')"
+
+    - name: Optimization check (prawdziwe procesy Windows)
+      working-directory: ./app
+      run: |
+        python tests/check_windows_optimizer.py
 
     - name: Build EXE
       working-directory: ./app

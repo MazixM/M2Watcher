@@ -26,6 +26,7 @@ Gotowe. Zostaw aplikację uruchomioną (możesz ją zminimalizować). Wszystko z
 - 🔊 Własne dźwięki dla każdego zdarzenia (wbudowane albo Twój plik `.wav`) i regulacja głośności w aplikacji
 - 🪟 Czytelne okno: lista klientów, status Discorda, historia zdarzeń, duży przycisk „Zatrzymaj alarm”
 - 📝 Log błędów do pliku (przycisk „Otwórz folder logów”)
+- ⚡ **Optymalizacja wielu klientów** (opcjonalna zakładka): limit FPS dla okien w tle, przypisanie klientów do rdzeni procesora i niższy priorytet w tle — dla wszystkich albo tylko wybranych klientów. Szczegóły i research: [app/OPTYMALIZACJA.md](app/OPTYMALIZACJA.md)
 
 ## Jak to działa
 
@@ -35,6 +36,8 @@ Aplikacja działa **całkowicie pasywnie**: nie modyfikuje klienta gry i nie ing
 - liczba połączeń sieciowych procesu gry, żeby wykryć wylogowanie. Klient na ekranie logowania nie ma połączenia z serwerem gry; gdy połączenia nie ma dłużej niż kilka sekund (ustawiane), to wylogowanie.
 
 Aplikacja **nie** czyta pamięci gry, nie wstrzykuje kodu, nie klika w okno i nie analizuje obrazu.
+
+**Wyjątek: zakładka Optymalizacja.** Jest domyślnie wyłączona. Gdy ją włączysz, M2Watcher zmienia procesy gry tymi samymi funkcjami Windows, których używa Menedżer zadań: rdzenie procesora i priorytet. Przy limicie FPS dodatkowo cyklicznie wstrzymuje proces klienta, tak jak BES. Nadal nie czyta pamięci gry i niczego do niej nie wstrzykuje. Po wyłączeniu klienty wracają do pierwotnych ustawień.
 
 **Odpowiedzialność:** według autora aplikacja nie łamie regulaminu gry, bo działa pasywnie. Jednak **używasz jej na własną odpowiedzialność**. Autor nie odpowiada za ewentualne konsekwencje.
 
@@ -47,6 +50,7 @@ Wszystko leży w `%USERPROFILE%\.m2watcher\`:
 | `config.json` | ustawienia (edytujesz je w oknie Ustawienia) |
 | `logs\m2watcher.log` | log błędów — **dołącz go przy zgłaszaniu problemu** |
 | `outbox.json` | powiadomienia czekające na wysłanie (np. gdy nie było internetu) |
+| `throttled.json` | klienty z limitem FPS — pozwala je wznowić, gdyby M2Watcher został zabity |
 
 Szczegóły techniczne, uruchamianie z kodu źródłowego i rozwiązywanie problemów: [app/README.md](app/README.md).
 
