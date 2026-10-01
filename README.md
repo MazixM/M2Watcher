@@ -4,7 +4,7 @@ Pilnuje Twoich klientów Metin2 i daje znać, gdy któryś się **wyloguje** alb
 
 ## Szybki start (3 kroki)
 
-1. Pobierz najnowszy `M2Watcher-*.zip` z [Releases](https://github.com/MazixM/M2Watcher/releases) i rozpakuj.
+1. Pobierz **[M2Watcher.exe](https://github.com/MazixM/M2Watcher/releases/latest/download/M2Watcher.exe)** (zawsze najnowsza wersja, jeden plik, nic nie trzeba rozpakowywać). Starsze wydania: [Releases](https://github.com/MazixM/M2Watcher/releases).
 2. Uruchom `M2Watcher.exe`. Nie trzeba instalować Pythona ani niczego innego.
 3. Przejdź kreator (ok. 2 minuty):
    - wpisz **nazwę urządzenia**, np. „Laptop” albo „PC w pokoju”. Pojawi się w każdym powiadomieniu, więc przy kilku komputerach od razu wiesz, skąd przyszedł alert;

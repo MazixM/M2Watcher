@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Generuje opis release'u w formacie dotychczasowych wydań (v.1.0.x).
-# Użycie: release_notes.sh <tag> <sha> <owner/repo> <plik_zip> [vt_result] [vt_url]
+# Użycie: release_notes.sh <tag> <sha> <owner/repo> <nazwa_assetu_exe> [vt_result] [vt_url]
 set -euo pipefail
 
-TAG="$1"; SHA="$2"; REPO="$3"; ZIP="$4"
+TAG="$1"; SHA="$2"; REPO="$3"; ASSET="$4"
 VT_RESULT="${5:-}"
 VT_URL="${6:-}"
 URL="https://github.com/${REPO}"
@@ -17,7 +17,9 @@ echo "Automatycznie wygenerowany build z commit: \`${SHA}\`"
 echo
 echo "### 📦 Pobierz"
 echo
-echo "Pobierz plik **${ZIP}** z sekcji Assets poniżej."
+echo "Pobierz plik **${ASSET}** z sekcji Assets poniżej, albo zawsze najnowszą wersję pod stałym linkiem:"
+echo
+echo "${URL}/releases/latest/download/${ASSET}"
 echo
 
 if [ -n "$VT_RESULT" ]; then
@@ -44,9 +46,8 @@ fi
 echo
 echo "### ⚙️ Instalacja"
 echo
-echo "1. Pobierz plik ZIP"
-echo "2. Rozpakuj"
-echo "3. Uruchom M2Watcher.exe"
-echo "4. Przejdź kreator pierwszego uruchomienia — [instrukcja konfiguracji Discord](${URL}/blob/main/app/DISCORD_SETUP.md)"
+echo "1. Pobierz plik M2Watcher.exe (nic nie trzeba rozpakowywać ani instalować)"
+echo "2. Uruchom M2Watcher.exe"
+echo "3. Przejdź kreator pierwszego uruchomienia — [instrukcja konfiguracji Discord](${URL}/blob/main/app/DISCORD_SETUP.md)"
 echo
 echo "Aktualizacja ze starszej wersji: podmień plik exe — ustawienia zostaną przeniesione automatycznie."
