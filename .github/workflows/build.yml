@@ -78,20 +78,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-build.txt
 
-    - name: Bootloader PyInstallera ze źródeł (mniej fałszywych alarmów)
-      shell: bash
-      run: |
-        # Gotowy bootloader z wheela ma bajty wspólne z tysiącami próbek malware, na których uczą
-        # się modele AV (Wacatac!ml, „Static AI”). Skompilowany tu ze źródeł ma inny odcisk.
-        # Windows-latest ma MSVC. Gdyby build się nie udał — wracamy do bootloadera z wheela.
-        ver=$(python -c "import PyInstaller,sys; sys.stdout.write(PyInstaller.__version__)")
-        echo "PyInstaller $ver — buduję bootloader ze źródeł"
-        if pip install --no-binary pyinstaller --force-reinstall --no-deps "pyinstaller==$ver"; then
-          echo "✓ bootloader zbudowany ze źródeł"
-        else
-          echo "::warning::Nie udało się zbudować bootloadera ze źródeł — używam gotowego z wheela"
-          pip install --force-reinstall --no-deps "pyinstaller==$ver"
-        fi
+    # Bootloader PyInstallera: standardowy z wheela, NIE kompilowany ze źródeł.
+    # Pomiar (issue #7): --onedir + bootloader z wheela = 0/67; --onedir + bootloader ze źródeł = 4/71
+    # (Microsoft Wacatac!ml, CrowdStrike, APEX, Skyhigh). Świeżo skompilowany bootloader nikt wcześniej
+    # nie widział, więc modele ML traktują go jak nieznany packer; standardowy ma reputację z tysięcy
+    # legalnych aplikacji. Kompilacja ze źródeł pomagała tylko w --onefile (8 → 5 wykryć).
 
     - name: Run tests
       working-directory: ./app
