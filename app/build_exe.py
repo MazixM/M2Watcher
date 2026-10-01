@@ -1,15 +1,16 @@
 """
-Buduje M2Watcher.exe (PyInstaller, jeden plik, bez okna konsoli).
+Buduje folder dist/M2Watcher/ z M2Watcher.exe (PyInstaller, tryb katalogowy, bez okna konsoli).
 
     pip install -r requirements-build.txt
     python build_exe.py
 
-Tryb ``--onefile`` (jeden plik) wybrany świadomie: użytkownik pobiera i uruchamia jeden exe,
-nic nie może się „rozjechać”. Tryb katalogowy (``--onedir``) dawał mniej fałszywych alarmów,
-ale wymagał folderu ``_internal`` obok exe — i psuł się, gdy przeniesiono sam plik albo gdy
-antywirus usunął z folderu pojedynczą bibliotekę. Działające uruchomienie jest ważniejsze niż
-kilka wykryć mniej, więc walkę z fałszywymi alarmami prowadzimy inaczej: bez UPX, z metadanymi
-i ikoną, z bootloaderem budowanym ze źródeł (CI) i docelowo z podpisem cyfrowym.
+Tryb ``--onedir`` (folder: exe + ``_internal``) wybrany świadomie. Tryb jednego pliku (``--onefile``)
+rozpakowuje się przy starcie do ``%TEMP%`` i ma archiwum doklejone na końcu exe (overlay) — dokładnie
+tak wyglądają dropery, więc modele ML antywirusów (Microsoft ``Wacatac!ml``, „Static AI”) flagowały go
+w 4–8 silnikach mimo braku UPX, metadanych i bootloadera ze źródeł. Ten sam kod w ``--onedir`` miał
+0 wykryć na VirusTotal (issue #7). Cena: użytkownik musi rozpakować cały folder i uruchamiać exe
+z niego — sam ``M2Watcher.exe`` przeniesiony gdzie indziej nie wystartuje (brak ``python312.dll``).
+Dlatego wydanie to zip z całym folderem, a README mówi wprost: rozpakuj całość, nie kopiuj samego exe.
 """
 import shutil
 import subprocess
@@ -88,7 +89,7 @@ def main() -> int:
 
     args = [
         sys.executable, "-m", "PyInstaller",
-        "--noconfirm", "--clean", "--onefile", "--windowed",
+        "--noconfirm", "--clean", "--onedir", "--windowed",
         "--name", "M2Watcher",
         # UPX podbija fałszywe alarmy (kompresja kojarzona z malware) — wyłączamy jawnie
         "--noupx",
@@ -108,14 +109,18 @@ def main() -> int:
         print("✗ PyInstaller zakończył się błędem")
         return result.returncode
 
-    exe = HERE / "dist" / ("M2Watcher.exe" if sys.platform == "win32" else "M2Watcher")
-    if not exe.exists():
-        print(f"✗ Nie znaleziono {exe}")
+    out_dir = HERE / "dist" / "M2Watcher"
+    exe = out_dir / ("M2Watcher.exe" if sys.platform == "win32" else "M2Watcher")
+    internal = out_dir / "_internal"
+    if not exe.exists() or not internal.is_dir():
+        print(f"✗ Nie znaleziono {exe} albo folderu {internal}")
         return 1
     shutil.rmtree(HERE / "build", ignore_errors=True)
     for spec in HERE.glob("*.spec"):
         spec.unlink()
-    print(f"✓ Gotowe: {exe} ({exe.stat().st_size / 1024 / 1024:.1f} MB)")
+    total = sum(f.stat().st_size for f in out_dir.rglob("*") if f.is_file())
+    files = sum(1 for f in out_dir.rglob("*") if f.is_file())
+    print(f"✓ Gotowe: {out_dir} ({files} plików, {total / 1024 / 1024:.1f} MB; exe {exe.stat().st_size / 1024 / 1024:.1f} MB)")
     return 0
 
 

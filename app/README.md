@@ -19,15 +19,17 @@ Wymagany Python 3.10+ z `tkinter` (instalator z python.org ma go domyślnie).
 ```bash
 cd app
 pip install -r requirements-build.txt
-python build_exe.py       # → dist/M2Watcher.exe (jeden plik, bez okna konsoli)
+python build_exe.py       # → dist/M2Watcher/ (M2Watcher.exe + _internal/, bez okna konsoli)
 ```
 
-Build jest w trybie jednego pliku (`--onefile`), bez UPX, z metadanymi wersji (z `version.py`) i ikoną
-(`assets/m2watcher.ico`). W CI bootloader PyInstallera jest dodatkowo kompilowany ze źródeł — świadomie,
-żeby ograniczyć fałszywe alarmy antywirusów bez utraty wygody jednego pliku (tryb `--onedir` dawał mniej
-wykryć, ale wymagał folderu `_internal` obok exe i psuł się w praktyce). Szczegóły i dalsze kroki
-(m.in. podpis cyfrowy): [issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7)
-oraz [SIGNING.md](../SIGNING.md).
+Build jest w trybie katalogowym (`--onedir`: `M2Watcher.exe` + folder `_internal`), bez UPX, z metadanymi
+wersji (z `version.py`) i ikoną (`assets/m2watcher.ico`). W CI bootloader PyInstallera jest dodatkowo
+kompilowany ze źródeł. Tryb jednego pliku (`--onefile`) był wygodniejszy, ale rozpakowuje się do `%TEMP%`
+i ma overlay jak droper — modele ML antywirusów (m.in. Microsoft `Wacatac!ml`) flagowały go w 4–8 silnikach
+mimo wszystkich pozostałych zabiegów, a ten sam kod w `--onedir` miał 0 wykryć. Cena: exe działa tylko
+obok swojego `_internal` (przeniesiony sam daje błąd `python312.dll`), dlatego wydanie to zip z całym
+folderem, a instrukcje mówią „rozpakuj całość”. Szczegóły i dalsze kroki (m.in. podpis cyfrowy):
+[issue o fałszywych alarmach](https://github.com/MazixM/M2Watcher/issues/7) oraz [SIGNING.md](../SIGNING.md).
 
 ## Wydania (release)
 
@@ -35,7 +37,7 @@ CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie
 (artefakt do pobrania z zakładki Actions) i — jeśli jest sekret `VIRUSTOTAL_API_KEY` — skanuje exe na
 VirusTotal, dopisując wynik do komentarza w PR-ze.
 
-**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z assetem `M2Watcher.exe` (goły exe, zawsze pod tą samą nazwą — stały link `releases/latest/download/M2Watcher.exe`; bez zipa i bez sha w nazwie, żeby reputacja pliku w SmartScreen/AV kumulowała się między wydaniami) i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
+**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z assetem `M2Watcher.zip` (folder `M2Watcher/` z exe i `_internal/`; zawsze pod tą samą nazwą — stały link `releases/latest/download/M2Watcher.zip`, bez sha w nazwie, żeby reputacja w SmartScreen/AV kumulowała się między wydaniami) i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
 
 Numer wersji:
 - bazą jest `__version__` w `app/version.py`,
@@ -69,7 +71,7 @@ Moduł optymalizacji ma testy logiki na atrapie procesów (`tests/test_optimizer
 | `optimizer.py` | opcjonalna optymalizacja: limit FPS (wstrzymywanie/wznawianie), rdzenie CPU, priorytet w tle — [OPTYMALIZACJA.md](OPTYMALIZACJA.md) |
 | `config.py` | `config.json`: domyślne wartości, migracja ze starej wersji, zapis atomowy |
 | `app_logging.py` | log do pliku z rotacją + przechwytywanie nieobsłużonych wyjątków |
-| `build_exe.py` | build PyInstaller (`--onefile`): metadane wersji, ikona, bez UPX |
+| `build_exe.py` | build PyInstaller (`--onedir`): metadane wersji, ikona, bez UPX |
 | `assets/m2watcher.ico` | ikona aplikacji i exe |
 | `gui/` | okno główne (zakładki Monitor i Optymalizacja), kreator pierwszego uruchomienia, ustawienia |
 
