@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generuje opis release'u w formacie dotychczasowych wydań (v.1.0.x).
-# Użycie: release_notes.sh <tag> <sha> <owner/repo> <nazwa_assetu_exe> [vt_result] [vt_url]
+# Użycie: release_notes.sh <tag> <sha> <owner/repo> <nazwa_assetu_zip> [vt_result] [vt_url]
 set -euo pipefail
 
 TAG="$1"; SHA="$2"; REPO="$3"; ASSET="$4"
@@ -46,8 +46,8 @@ fi
 echo
 echo "### ⚙️ Instalacja"
 echo
-echo "1. Pobierz plik M2Watcher.exe (nic nie trzeba rozpakowywać ani instalować)"
-echo "2. Uruchom M2Watcher.exe"
+echo "1. Pobierz ${ASSET} i rozpakuj **cały** folder \`M2Watcher\` (exe + \`_internal\`) w dowolne miejsce"
+echo "2. Uruchom \`M2Watcher.exe\` z tego folderu. Nie kopiuj samego exe gdzie indziej — bez \`_internal\` nie wystartuje (błąd \`python312.dll\`)"
 echo "3. Przejdź kreator pierwszego uruchomienia — [instrukcja konfiguracji Discord](${URL}/blob/main/app/DISCORD_SETUP.md)"
 echo
-echo "Aktualizacja ze starszej wersji: podmień plik exe — ustawienia zostaną przeniesione automatycznie."
+echo "Aktualizacja ze starszej wersji: zamknij M2Watcher i podmień cały folder — ustawienia są w \`%USERPROFILE%\\.m2watcher\` i zostaną zachowane."
