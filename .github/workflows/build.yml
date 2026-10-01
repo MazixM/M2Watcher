@@ -1,7 +1,9 @@
 name: Build EXE
 
 # PR: testy + build exe (artefakt) dla KAŻDEGO PR-a + komentarz w PR z linkiem do pobrania exe.
-# Push do main: to samo, a po sukcesie automatyczny release v.X.Y.Z z zipem.
+# Push do main: to samo, a po sukcesie automatyczny release v.X.Y.Z z gołym M2Watcher.exe.
+# Asset ma zawsze tę samą nazwę (bez sha w nazwie, bez zipa): jeden stały link do pobrania
+# (releases/latest/download/M2Watcher.exe), a reputacja pliku w SmartScreen/AV nie zeruje się co wydanie.
 # Wersja: app/version.py; jeśli release z nią już istnieje, patch jest podbijany automatycznie.
 
 on:
@@ -231,19 +233,17 @@ jobs:
         name: M2Watcher.exe
         path: dist
 
-    - name: Create ZIP
-      id: zip
+    - name: Verify EXE
       run: |
-        zip_name="M2Watcher-${GITHUB_SHA}.zip"
-        (cd dist && zip -q "../${zip_name}" M2Watcher.exe)
-        echo "name=${zip_name}" >> "$GITHUB_OUTPUT"
-        ls -la "${zip_name}"
+        # Jeden asset o stałej nazwie: M2Watcher.exe (bez zipa, bez sha w nazwie).
+        test -f dist/M2Watcher.exe
+        ls -la dist/M2Watcher.exe
 
     - name: Create release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: v.${{ needs.build.outputs.version }}
-        ZIP: ${{ steps.zip.outputs.name }}
+        ASSET: dist/M2Watcher.exe
         VT_RESULT: ${{ needs.build.outputs.vt_result }}
         VT_URL: ${{ needs.build.outputs.vt_url }}
       run: |
@@ -251,9 +251,9 @@ jobs:
           echo "::error::Release $TAG już istnieje — podbij wersję w app/version.py"
           exit 1
         fi
-        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$ZIP" "$VT_RESULT" "$VT_URL" > notes.md
+        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "M2Watcher.exe" "$VT_RESULT" "$VT_URL" > notes.md
         cat notes.md
-        gh release create "$TAG" "$ZIP" \
+        gh release create "$TAG" "$ASSET" \
           --target "$GITHUB_SHA" \
           --title "Release $TAG" \
           --notes-file notes.md

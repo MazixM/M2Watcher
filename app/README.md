@@ -35,7 +35,7 @@ CI (`.github/workflows/build.yml`) na każdym PR-ze uruchamia testy na Windowsie
 (artefakt do pobrania z zakładki Actions) i — jeśli jest sekret `VIRUSTOTAL_API_KEY` — skanuje exe na
 VirusTotal, dopisując wynik do komentarza w PR-ze.
 
-**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z plikiem `M2Watcher-<commit>.zip` (zip z folderem `M2Watcher`) i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
+**Każdy udany push do `main` sam tworzy release** `v.X.Y.Z` z assetem `M2Watcher.exe` (goły exe, zawsze pod tą samą nazwą — stały link `releases/latest/download/M2Watcher.exe`; bez zipa i bez sha w nazwie, żeby reputacja pliku w SmartScreen/AV kumulowała się między wydaniami) i opisem: lista zmian od poprzedniego wydania, link do commitów i instrukcja instalacji.
 
 Numer wersji:
 - bazą jest `__version__` w `app/version.py`,
