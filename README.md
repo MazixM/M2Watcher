@@ -88,3 +88,17 @@ Jeśli aplikacja jest dla Ciebie przydatna, możesz wesprzeć projekt dobrowoln�
 ## Licencja
 
 [MIT](LICENSE) — możesz używać, zmieniać i rozpowszechniać, zachowując informację o autorze.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- Committers and reviewers: [MazixM](https://github.com/MazixM)
+- Approvers: [MazixM](https://github.com/MazixM)
+
+Every release is built from the tagged source code by the public GitHub Actions workflow
+[`build.yml`](.github/workflows/build.yml); signing requests are approved manually for each release.
+
+**Privacy policy.** This program will not transfer any information to other networked systems
+unless specifically requested by the user or the person installing or operating it. The only
+network destination is the Discord webhook URL that the user enters in the settings.
