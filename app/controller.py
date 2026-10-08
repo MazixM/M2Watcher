@@ -11,7 +11,6 @@ from config import Config, EVENT_LABELS
 from discord_client import DiscordSender, SenderStatus
 from m2watcher import Metin2Watcher, WatchEvent
 from notifications import NotificationManager
-from optimizer import Optimizer, profile_from_dict
 from sounds import SoundPlayer
 
 log = logging.getLogger(__name__)
@@ -43,21 +42,14 @@ class AppController:
             },
             on_event=self._on_event,
         )
-        self.optimizer = Optimizer(
-            lambda: self.config.get("optimization", {}),
-            lambda: [c.pid for c in self.watcher.snapshot()],
-            state_path=self.config.path.parent / "throttled.json",
-        )
 
     def start(self) -> None:
         self.sender.start()
         self.watcher.start()
-        self.optimizer.start()
 
     def shutdown(self) -> None:
         log.info("Zamykanie aplikacji")
         self.sounds.stop()
-        self.optimizer.stop()  # wznawia i przywraca klienty, zanim monitor zniknie
         self.watcher.stop()
         self.sender.stop()
 
@@ -82,12 +74,6 @@ class AppController:
         self.sender.settings_changed()
         log.info("Zapisano ustawienia (urządzenie: %s, Discord: %s)",
                  self.config.get("device_name"), self.config.get("discord.method"))
-
-    def save_optimization(self, data: Dict) -> None:
-        """Zapisuje tylko sekcję „optimization” — moduł podchwyci ją w ciągu ~0,25 s."""
-        self.config.set("optimization", data)
-        log.info("Optymalizacja: %s, dla wszystkich: %s", "włączona" if data.get("enabled") else "wyłączona",
-                 profile_from_dict(data.get("default")).describe())
 
     def discord_status(self) -> SenderStatus:
         return self.sender.status

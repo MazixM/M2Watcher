@@ -77,18 +77,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "reconnect": {"sound": "builtin:dzwonek", "file": ""},
         },
     },
-    # Moduł optymalizacji wielu klientów (optimizer.py) — opcjonalny, domyślnie wyłączony
-    "optimization": {
-        "enabled": False,
-        # Ustawienia dla wszystkich klientów; wybrane klienty mogą mieć własne (w oknie aplikacji)
-        "default": {
-            "fps_limit": 0,                   # 0 = bez limitu, 5–59 = limit FPS
-            "fps_background_only": True,      # limit tylko dla klientów, których okno nie jest aktywne
-            "cores_mode": "none",             # "none" | "list" | "spread"
-            "cores": [],                      # pula rdzeni logicznych (pusta = wszystkie)
-            "background_priority": "normal",  # "normal" | "below_normal" | "idle"
-        },
-    },
 }
 
 

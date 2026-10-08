@@ -120,8 +120,7 @@ def self_test() -> int:
     """
     import importlib
     problems = []
-    modules = ["tkinter", "psutil", "requests", "controller", "optimizer", "gui.main_window", "gui.settings",
-               "gui.optimization"]
+    modules = ["tkinter", "psutil", "requests", "controller", "gui.main_window", "gui.settings"]
     if sys.platform == "win32":
         modules += ["winsound", "win32gui", "win32process", "pywintypes"]
     for name in modules:
