@@ -26,15 +26,5 @@
       "closed": {"sound": "builtin:syrena", "file": ""},
       "reconnect": {"sound": "builtin:dzwonek", "file": ""}
     }
-  },
-  "optimization": {
-    "enabled": false,
-    "default": {
-      "fps_limit": 20,
-      "fps_background_only": true,
-      "cores_mode": "spread",
-      "cores": [],
-      "background_priority": "below_normal"
-    }
   }
 }

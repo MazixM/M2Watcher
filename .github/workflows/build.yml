@@ -1,10 +1,9 @@
 name: Build EXE
 
 # PR: testy + build exe (artefakt) dla KAŻDEGO PR-a + komentarz w PR z linkiem do pobrania exe.
-# Push do main: to samo, a po sukcesie automatyczny release v.X.Y.Z z M2Watcher.zip.
-# Build jest w trybie katalogowym (--onedir: folder M2Watcher/ z exe i _internal/) — jedyny wariant
-# z 0 wykryć na VirusTotal (issue #7). Asset ma zawsze tę samą nazwę (bez sha): jeden stały link
-# releases/latest/download/M2Watcher.zip, a reputacja w SmartScreen/AV nie zeruje się co wydanie.
+# Push do main: to samo, a po sukcesie automatyczny release v.X.Y.Z z gołym M2Watcher.exe.
+# Asset ma zawsze tę samą nazwę (bez sha w nazwie, bez zipa): jeden stały link do pobrania
+# (releases/latest/download/M2Watcher.exe), a reputacja pliku w SmartScreen/AV nie zeruje się co wydanie.
 # Wersja: app/version.py; jeśli release z nią już istnieje, patch jest podbijany automatycznie.
 
 on:
@@ -78,11 +77,20 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-build.txt
 
-    # Bootloader PyInstallera: standardowy z wheela, NIE kompilowany ze źródeł.
-    # Pomiar (issue #7): --onedir + bootloader z wheela = 0/67; --onedir + bootloader ze źródeł = 4/71
-    # (Microsoft Wacatac!ml, CrowdStrike, APEX, Skyhigh). Świeżo skompilowany bootloader nikt wcześniej
-    # nie widział, więc modele ML traktują go jak nieznany packer; standardowy ma reputację z tysięcy
-    # legalnych aplikacji. Kompilacja ze źródeł pomagała tylko w --onefile (8 → 5 wykryć).
+    - name: Bootloader PyInstallera ze źródeł (mniej fałszywych alarmów)
+      shell: bash
+      run: |
+        # Gotowy bootloader z wheela ma bajty wspólne z tysiącami próbek malware, na których uczą
+        # się modele AV (Wacatac!ml, „Static AI”). Skompilowany tu ze źródeł ma inny odcisk.
+        # Windows-latest ma MSVC. Gdyby build się nie udał — wracamy do bootloadera z wheela.
+        ver=$(python -c "import PyInstaller,sys; sys.stdout.write(PyInstaller.__version__)")
+        echo "PyInstaller $ver — buduję bootloader ze źródeł"
+        if pip install --no-binary pyinstaller --force-reinstall --no-deps "pyinstaller==$ver"; then
+          echo "✓ bootloader zbudowany ze źródeł"
+        else
+          echo "::warning::Nie udało się zbudować bootloadera ze źródeł — używam gotowego z wheela"
+          pip install --force-reinstall --no-deps "pyinstaller==$ver"
+        fi
 
     - name: Run tests
       working-directory: ./app
@@ -92,12 +100,7 @@ jobs:
     - name: Smoke test (imports on Windows)
       working-directory: ./app
       run: |
-        python -c "import main, gui.main_window, gui.settings, gui.optimization, m2watcher, sounds, optimizer; assert m2watcher.WIN32_AVAILABLE, 'pywin32'; assert sounds.IS_WINDOWS; print('OK')"
-
-    - name: Optimization check (prawdziwe procesy Windows)
-      working-directory: ./app
-      run: |
-        python tests/check_windows_optimizer.py
+        python -c "import main, gui.main_window, gui.settings, m2watcher, sounds; assert m2watcher.WIN32_AVAILABLE, 'pywin32'; assert sounds.IS_WINDOWS; print('OK')"
 
     - name: Build EXE
       working-directory: ./app
@@ -109,20 +112,19 @@ jobs:
     - name: Verify EXE exists
       working-directory: ./app
       run: |
-        if (-not (Test-Path "dist/M2Watcher/M2Watcher.exe") -or -not (Test-Path "dist/M2Watcher/_internal")) {
-          Write-Error "dist/M2Watcher/M2Watcher.exe albo _internal nie zostały utworzone!"
+        if (-not (Test-Path "dist/M2Watcher.exe")) {
+          Write-Error "M2Watcher.exe nie został utworzony!"
           exit 1
         }
-        $size = (Get-Item "dist/M2Watcher/M2Watcher.exe").Length / 1MB
-        $total = (Get-ChildItem "dist/M2Watcher" -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
-        Write-Output "✓ dist/M2Watcher utworzony (exe: $([math]::Round($size, 2)) MB, folder: $([math]::Round($total, 2)) MB)"
+        $size = (Get-Item "dist/M2Watcher.exe").Length / 1MB
+        Write-Output "✓ M2Watcher.exe utworzony (rozmiar: $([math]::Round($size, 2)) MB)"
 
     - name: Self-test EXE (moduły spakowane w exe)
       working-directory: ./app
       shell: pwsh
       run: |
         # Test na gotowym exe, nie na Pythonie — łapie moduły pominięte przez PyInstallera
-        $p = Start-Process -FilePath "dist/M2Watcher/M2Watcher.exe" -ArgumentList "--self-test" -Wait -PassThru
+        $p = Start-Process -FilePath "dist/M2Watcher.exe" -ArgumentList "--self-test" -Wait -PassThru
         Get-Content "$env:USERPROFILE\.m2watcher\logs\m2watcher.log" -Tail 20
         if ($p.ExitCode -ne 0) { Write-Error "Self-test exe nie przeszedł (kod $($p.ExitCode))"; exit 1 }
 
@@ -141,20 +143,20 @@ jobs:
           echo "Pominięto skan VirusTotal — brak sekretu VIRUSTOTAL_API_KEY." >> "$GITHUB_STEP_SUMMARY"
           exit 0
         fi
-        python ../.github/scripts/vt_scan.py "dist/M2Watcher/M2Watcher.exe" || true
+        python ../.github/scripts/vt_scan.py "dist/M2Watcher.exe" || true
 
     - name: Upload EXE artifact
       id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: M2Watcher
-        path: app/dist/M2Watcher/
+        name: M2Watcher.exe
+        path: app/dist/M2Watcher.exe
         retention-days: 30
 
     - name: Link do pobrania w podsumowaniu
       shell: bash
       run: |
-        echo "### 📦 [Pobierz M2Watcher (${{ steps.version.outputs.display }})](${{ steps.upload.outputs.artifact-url }}) — rozpakuj cały zip, uruchom M2Watcher.exe z folderu" >> "$GITHUB_STEP_SUMMARY"
+        echo "### 📦 [Pobierz M2Watcher.exe (${{ steps.version.outputs.display }})](${{ steps.upload.outputs.artifact-url }})" >> "$GITHUB_STEP_SUMMARY"
 
   pr-comment:
     # Komentarz w PR z bezpośrednim linkiem do exe — aktualizowany przy każdym pushu.
@@ -187,11 +189,11 @@ jobs:
           }
           const body = [
             marker,
-            '### 📦 M2Watcher do przetestowania',
+            '### 📦 M2Watcher.exe do przetestowania',
             '',
-            `**[Pobierz M2Watcher](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
+            `**[Pobierz M2Watcher.exe](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
             vtLine,
-            'Zip zawiera folder z `M2Watcher.exe` i `_internal/` (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. **Rozpakuj całość do jednego folderu i uruchom exe z niego** — sam przeniesiony exe nie wystartuje. [Szczegóły builda](' + runUrl + ')',
+            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](' + runUrl + ')',
             '',
             '_Komentarz aktualizuje się po każdym pushu do tego PR-a._',
           ].join('\n');
@@ -220,26 +222,23 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Download build folder
+    - name: Download EXE
       uses: actions/download-artifact@v4
       with:
-        name: M2Watcher
-        path: dist/M2Watcher
+        name: M2Watcher.exe
+        path: dist
 
-    - name: Create ZIP
+    - name: Verify EXE
       run: |
-        # Jeden asset o stałej nazwie: M2Watcher.zip (bez sha w nazwie). W środku folder M2Watcher/
-        # z exe i _internal/ — użytkownik rozpakowuje całość i uruchamia exe z tego folderu.
-        test -f dist/M2Watcher/M2Watcher.exe
-        test -d dist/M2Watcher/_internal
-        (cd dist && zip -q -r ../M2Watcher.zip M2Watcher)
-        ls -la M2Watcher.zip
+        # Jeden asset o stałej nazwie: M2Watcher.exe (bez zipa, bez sha w nazwie).
+        test -f dist/M2Watcher.exe
+        ls -la dist/M2Watcher.exe
 
     - name: Create release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: v.${{ needs.build.outputs.version }}
-        ASSET: M2Watcher.zip
+        ASSET: dist/M2Watcher.exe
         VT_RESULT: ${{ needs.build.outputs.vt_result }}
         VT_URL: ${{ needs.build.outputs.vt_url }}
       run: |
@@ -247,7 +246,7 @@ jobs:
           echo "::error::Release $TAG już istnieje — podbij wersję w app/version.py"
           exit 1
         fi
-        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "M2Watcher.zip" "$VT_RESULT" "$VT_URL" > notes.md
+        bash .github/scripts/release_notes.sh "$TAG" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "M2Watcher.exe" "$VT_RESULT" "$VT_URL" > notes.md
         cat notes.md
         gh release create "$TAG" "$ASSET" \
           --target "$GITHUB_SHA" \

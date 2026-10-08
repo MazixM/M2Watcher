@@ -110,6 +110,21 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(cfg.get("discord.notify_events.logout"))
         self.assertFalse(cfg.is_first_run)
 
+    def test_config_from_2_1_with_removed_optimization_still_loads(self):
+        # Wersje 2.1.x zapisywały sekcję „optimization” (usunięty moduł) — aktualizacja nie może
+        # zgubić ustawień ani wymuszać ponownego kreatora.
+        self.path.write_text(json.dumps({
+            "config_version": config_mod.CONFIG_VERSION, "setup_completed": True, "device_name": "PC",
+            "discord": {"method": "webhook", "webhook_url": WEBHOOK},
+            "optimization": {"enabled": True, "default": {"fps_limit": 20, "cores_mode": "spread"}},
+        }), encoding="utf-8")
+        cfg = config_mod.Config(self.path)
+        self.assertFalse(cfg.load_error)
+        self.assertFalse(cfg.is_first_run)
+        self.assertEqual(cfg.get("device_name"), "PC")
+        self.assertEqual(cfg.get("discord.webhook_url"), WEBHOOK)
+        self.assertNotIn("optimization", config_mod.DEFAULT_CONFIG)
+
 
 class ValidationTests(unittest.TestCase):
     def test_webhook_urls(self):
