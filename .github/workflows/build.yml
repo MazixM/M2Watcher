@@ -37,6 +37,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+      actions: write  # usuwanie starszych artefaktów
     outputs:
       version: ${{ steps.version.outputs.version }}
       display_version: ${{ steps.version.outputs.display }}
@@ -151,7 +152,30 @@ jobs:
       with:
         name: M2Watcher.exe
         path: app/dist/M2Watcher.exe
-        retention-days: 30
+        retention-days: 7  # na main exe zostaje na stałe w GitHub Release
+
+    - name: Usuń starsze artefakty z tej gałęzi (zostaje najnowszy)
+      if: steps.upload.outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      continue-on-error: true
+      uses: actions/github-script@v7
+      env:
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        NAME_PATTERN: '^M2Watcher\.exe$'
+      with:
+        script: |
+          // Limit miejsca na artefakty liczy się z GB×godzin w całym miesiącu, więc trzymamy
+          // tylko najnowszy build z każdej gałęzi; retention-days sprząta porzucone gałęzie.
+          const { owner, repo } = context.repo;
+          const re = new RegExp(process.env.NAME_PATTERN);
+          const all = await github.paginate(github.rest.actions.listArtifactsForRepo, { owner, repo, per_page: 100 });
+          const old = all.filter(a => !a.expired && re.test(a.name)
+            && a.workflow_run?.head_branch === process.env.BRANCH
+            && a.workflow_run?.id !== context.runId);
+          for (const a of old) {
+            await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: a.id });
+            core.info(`Usunięto ${a.name} (run ${a.workflow_run.id}, ${Math.round(a.size_in_bytes / 1048576)} MB)`);
+          }
+          core.info(`Usunięto ${old.length} starszych artefaktów z gałęzi ${process.env.BRANCH}`);
 
     - name: Link do pobrania w podsumowaniu
       shell: bash
@@ -193,7 +217,7 @@ jobs:
             '',
             `**[Pobierz M2Watcher.exe](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
             vtLine,
-            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](' + runUrl + ')',
+            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 7 dni. [Szczegóły builda](' + runUrl + ')',
             '',
             '_Komentarz aktualizuje się po każdym pushu do tego PR-a._',
           ].join('\n');
