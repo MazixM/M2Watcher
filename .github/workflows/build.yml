@@ -1,7 +1,7 @@
 name: Build EXE
 
-# PR: testy + build exe (artefakt) dla KAŻDEGO PR-a + komentarz w PR z linkiem do pobrania exe.
-# Push do main: to samo, a po sukcesie automatyczny release v.X.Y.Z z gołym M2Watcher.exe.
+# PR: testy + build exe, bez artefaktu (artefakty zużywają miesięczny limit miejsca konta).
+# Push do main: to samo + artefakt, a po sukcesie automatyczny release v.X.Y.Z z gołym M2Watcher.exe.
 # Asset ma zawsze tę samą nazwę (bez sha w nazwie, bez zipa): jeden stały link do pobrania
 # (releases/latest/download/M2Watcher.exe), a reputacja pliku w SmartScreen/AV nie zeruje się co wydanie.
 # Wersja: app/version.py; jeśli release z nią już istnieje, patch jest podbijany automatycznie.
@@ -15,7 +15,7 @@ on:
       - 'app/**'
       - '.github/workflows/build.yml'
       - '.github/scripts/**'
-  pull_request:  # bez filtra ścieżek — każdy PR dostaje exe do pobrania przed scaleniem
+  pull_request:  # bez filtra ścieżek — każdy PR przechodzi testy i build exe
     branches:
       - main
       - master
@@ -37,6 +37,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+      actions: write  # usuwanie starszych artefaktów
     outputs:
       version: ${{ steps.version.outputs.version }}
       display_version: ${{ steps.version.outputs.display }}
@@ -147,65 +148,44 @@ jobs:
 
     - name: Upload EXE artifact
       id: upload
+      # Tylko to, z czego job release robi wydanie; PR-y nie zużywają limitu miejsca na artefakty.
+      if: >-
+        (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.release)
       uses: actions/upload-artifact@v4
       with:
         name: M2Watcher.exe
         path: app/dist/M2Watcher.exe
-        retention-days: 30
+        retention-days: 7  # na main exe zostaje na stałe w GitHub Release
+
+    - name: Usuń starsze artefakty z tej gałęzi (zostaje najnowszy)
+      if: steps.upload.outcome == 'success'
+      continue-on-error: true
+      uses: actions/github-script@v7
+      env:
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        NAME_PATTERN: '^M2Watcher\.exe$'
+      with:
+        script: |
+          // Limit miejsca na artefakty liczy się z GB×godzin w całym miesiącu, więc trzymamy
+          // tylko najnowszy build z każdej gałęzi; retention-days sprząta porzucone gałęzie.
+          const { owner, repo } = context.repo;
+          const re = new RegExp(process.env.NAME_PATTERN);
+          const all = await github.paginate(github.rest.actions.listArtifactsForRepo, { owner, repo, per_page: 100 });
+          const old = all.filter(a => !a.expired && re.test(a.name)
+            && a.workflow_run?.head_branch === process.env.BRANCH
+            && a.workflow_run?.id !== context.runId);
+          for (const a of old) {
+            await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: a.id });
+            core.info(`Usunięto ${a.name} (run ${a.workflow_run.id}, ${Math.round(a.size_in_bytes / 1048576)} MB)`);
+          }
+          core.info(`Usunięto ${old.length} starszych artefaktów z gałęzi ${process.env.BRANCH}`);
 
     - name: Link do pobrania w podsumowaniu
+      if: steps.upload.outcome == 'success'
       shell: bash
       run: |
         echo "### 📦 [Pobierz M2Watcher.exe (${{ steps.version.outputs.display }})](${{ steps.upload.outputs.artifact-url }})" >> "$GITHUB_STEP_SUMMARY"
-
-  pr-comment:
-    # Komentarz w PR z bezpośrednim linkiem do exe — aktualizowany przy każdym pushu.
-    # PR-y z forków mają token tylko do odczytu, więc je pomijamy (exe i tak jest w artefaktach runu).
-    needs: build
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-
-    steps:
-    - name: Dodaj/zaktualizuj komentarz z linkiem do exe
-      uses: actions/github-script@v7
-      env:
-        ARTIFACT_URL: ${{ needs.build.outputs.artifact_url }}
-        VERSION: ${{ needs.build.outputs.display_version }}
-        VT_RESULT: ${{ needs.build.outputs.vt_result }}
-        VT_URL: ${{ needs.build.outputs.vt_url }}
-      with:
-        script: |
-          const marker = '<!-- m2watcher-pr-exe -->';
-          const sha = context.payload.pull_request.head.sha;
-          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-          let vtLine = '';
-          if (process.env.VT_RESULT) {
-            const link = process.env.VT_URL ? `[${process.env.VT_RESULT}](${process.env.VT_URL})` : process.env.VT_RESULT;
-            vtLine = `\nVirusTotal: ${link}\n`;
-          }
-          const body = [
-            marker,
-            '### 📦 M2Watcher.exe do przetestowania',
-            '',
-            `**[Pobierz M2Watcher.exe](${process.env.ARTIFACT_URL})** — wersja \`${process.env.VERSION}\`, commit ${sha.slice(0, 7)}`,
-            vtLine,
-            'Plik jest spakowany w zip (artefakt GitHub Actions, trzeba być zalogowanym), ważny 30 dni. [Szczegóły builda](' + runUrl + ')',
-            '',
-            '_Komentarz aktualizuje się po każdym pushu do tego PR-a._',
-          ].join('\n');
-          const { owner, repo } = context.repo;
-          const issue_number = context.payload.pull_request.number;
-          const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
-          const existing = comments.find(c => c.body && c.body.includes(marker));
-          if (existing) {
-            await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
-          } else {
-            await github.rest.issues.createComment({ owner, repo, issue_number, body });
-          }
 
   release:
     needs: build
